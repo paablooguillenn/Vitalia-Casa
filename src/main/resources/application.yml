@@ -1,0 +1,29 @@
+spring:
+  h2:
+    console:
+      enabled: true
+      settings:
+        web-allow-others: true
+  datasource:
+    url: jdbc:h2:mem:testdb  # En desarrollo local
+    driver-class-name: org.h2.Driver
+    username: sa
+    # En producción (Docker), estas se sobrescriben con env vars
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  security:
+    user:
+      name: admin
+      password: 123456  # Cambiado para coincidir con docker-compose
+
+server:
+  address: 0.0.0.0
+  port: 8080
+
+jwt:
+  secret: ${JWT_SECRET:}
