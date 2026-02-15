@@ -60,7 +60,7 @@ public class AppointmentController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    // Permitir a cualquier usuario autenticado cancelar citas
     public ResponseEntity<?> deleteAppointment(@PathVariable Long id) {
         return appointmentService.deleteAppointment(id);
     }

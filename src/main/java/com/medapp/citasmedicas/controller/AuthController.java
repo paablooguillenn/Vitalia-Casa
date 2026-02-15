@@ -2,6 +2,7 @@ package com.medapp.citasmedicas.controller;
 
 import com.medapp.citasmedicas.model.User;
 import com.medapp.citasmedicas.repository.UserRepository;
+import com.medapp.citasmedicas.repository.DoctorRepository;
 import com.medapp.citasmedicas.security.JwtUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -40,8 +41,12 @@ public class AuthController {
     @Autowired
     private UserRepository userRepository;
     
+
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private DoctorRepository doctorRepository;
 
     @PostMapping("/login")
     @Operation(summary = "Login de usuario", description = "Autentica un usuario con email y password, devuelve JWT")
@@ -54,11 +59,24 @@ public class AuthController {
             authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
             );
-            
+
             final UserDetails userDetails = userDetailsService.loadUserByUsername(request.getEmail());
             final String jwt = jwtUtil.generateToken(userDetails);
-            
-            return ResponseEntity.ok(new AuthResponse(jwt));
+
+            // Buscar usuario en la base de datos
+            User user = userRepository.findByEmail(request.getEmail()).orElse(null);
+            String rol = null;
+            if (user != null) {
+                // Si el usuario está vinculado a un doctor, el rol es DOCTOR
+                if (doctorRepository.findByUser_Id(user.getId()) != null) {
+                    rol = "DOCTOR";
+                } else if (user.getRole() != null) {
+                    rol = user.getRole().name();
+                }
+            }
+
+            Long id = (user != null) ? user.getId() : null;
+            return ResponseEntity.ok(new AuthResponseFull(jwt, rol, id));
         } catch (BadCredentialsException e) {
             return ResponseEntity.status(401).body("Credenciales inválidas");
         }
@@ -116,11 +134,34 @@ class AuthRequest {
     public void setPassword(String password) { this.password = password; }
 }
 
+
 class AuthResponse {
     private String jwt;
-    
+
     public AuthResponse(String jwt) { this.jwt = jwt; }
-    
+
     public String getJwt() { return jwt; }
     public void setJwt(String jwt) { this.jwt = jwt; }
+}
+
+
+class AuthResponseFull {
+    private String jwt;
+    private String rol;
+    private Long id;
+
+    public AuthResponseFull(String jwt, String rol, Long id) {
+        this.jwt = jwt;
+        this.rol = rol;
+        this.id = id;
+    }
+
+    public String getJwt() { return jwt; }
+    public void setJwt(String jwt) { this.jwt = jwt; }
+
+    public String getRol() { return rol; }
+    public void setRol(String rol) { this.rol = rol; }
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 }

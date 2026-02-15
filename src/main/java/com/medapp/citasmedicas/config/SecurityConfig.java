@@ -15,6 +15,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -50,12 +51,18 @@ public class SecurityConfig {
                     "/webjars/**",
                     "/api/auth/**"
                 ).permitAll()
-                .requestMatchers(
-                    "/api/users/**",
-                    "/api/appointments/**",
-                    "/api/doctors/**",
-                    "/api/patients/**"
-                ).authenticated()
+                // Permitir explícitamente todos los métodos de /api/doctors/**
+                .requestMatchers("/api/doctors/**").permitAll()
+
+
+                // Permitir PUT en /api/appointments/** solo a DOCTOR y ADMIN
+                .requestMatchers(HttpMethod.PUT, "/api/appointments/**").hasAnyRole("DOCTOR", "ADMIN")
+                // Permitir POST en /api/appointments/**/files solo a DOCTOR y ADMIN
+                .requestMatchers(HttpMethod.POST, "/api/appointments/**/files").hasAnyRole("DOCTOR", "ADMIN")
+ 
+                // El resto de métodos sobre /api/appointments/** requieren autenticación
+                .requestMatchers("/api/appointments/**").authenticated()
+                .requestMatchers("/api/users/**", "/api/patients/**").authenticated()
                 .anyRequest().authenticated()
             )
             .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.disable()))

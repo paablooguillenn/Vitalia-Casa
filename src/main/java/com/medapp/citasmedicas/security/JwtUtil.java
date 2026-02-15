@@ -59,6 +59,11 @@ public class JwtUtil {
 
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
+        // Añadir el rol como claim (asume un solo rol)
+        if (!userDetails.getAuthorities().isEmpty()) {
+            String role = userDetails.getAuthorities().iterator().next().getAuthority();
+            claims.put("role", role);
+        }
         return createToken(claims, userDetails.getUsername());
     }
 
