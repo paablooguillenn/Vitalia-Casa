@@ -1,12 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import { Save } from "lucide-react"
 import { toast } from "sonner"
@@ -15,7 +15,25 @@ export default function PatientProfilePage() {
   const { user } = useAuth()
   const [name, setName] = useState(user?.name ?? "")
   const [email, setEmail] = useState(user?.email ?? "")
-  const [phone, setPhone] = useState(user?.phone ?? "")
+  const [phone, setPhone] = useState("")
+  const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
+
+  useEffect(() => {
+    if (!user?.id) return;
+    fetch(`http://192.168.68.58:8080/api/users/${user.id}`, {
+      headers: {
+        "Authorization": `Bearer ${localStorage.getItem('token')}`
+      }
+    })
+      .then(res => res.json())
+      .then(data => {
+        setName(data.nombre || "");
+        setEmail(data.email || "");
+        setPhone(data.telefono || "");
+        setProfilePictureUrl(data.profilePictureUrl || null);
+      });
+  }, [user?.id]);
 
   const initials = name
     .split(" ")
@@ -30,15 +48,15 @@ export default function PatientProfilePage() {
     if (!user) return;
     setSaving(true);
     try {
-      const res = await fetch(`http://172.20.10.4:8080/api/users/${user.id}`, {
+      const res = await fetch(`http://192.168.68.58:8080/api/users/${user.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
-          nombre: name
-          // Puedes añadir más campos si el backend lo permite
+          nombre: name,
+          telefono: phone
         })
       });
       if (!res.ok) throw new Error("Error al actualizar el perfil");
@@ -60,11 +78,55 @@ export default function PatientProfilePage() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16">
-              <AvatarFallback className="bg-primary/10 text-primary text-lg font-semibold">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative">
+              <Avatar className="h-16 w-16">
+                {profilePictureUrl ? (
+                  <AvatarImage src={`http://192.168.68.58:8080/${profilePictureUrl.replace(/\\/g, '/')}`} alt="Foto de perfil" />
+                ) : null}
+                <AvatarFallback className="bg-primary/10 text-primary text-lg font-semibold">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <form style={{ position: "absolute", bottom: 0, right: 0 }}>
+                <label htmlFor="profile-picture-upload" className="cursor-pointer bg-primary text-white rounded-full px-2 py-1 text-xs">
+                  {uploading ? "Subiendo..." : "Cambiar"}
+                  <input
+                    id="profile-picture-upload"
+                    type="file"
+                    accept="image/*"
+                    style={{ display: "none" }}
+                    disabled={uploading}
+                    onChange={async (e) => {
+                      if (!user?.id || !e.target.files?.[0]) return;
+                      setUploading(true);
+                      const formData = new FormData();
+                      formData.append("file", e.target.files[0]);
+                      try {
+                        const res = await fetch(`http://192.168.68.58:8080/api/users/${user.id}/profile-picture`, {
+                          method: "POST",
+                          headers: {
+                            "Authorization": `Bearer ${localStorage.getItem('token')}`
+                          },
+                          body: formData
+                        });
+                        if (!res.ok) throw new Error("Error al subir la foto");
+                        toast.success("Foto de perfil actualizada");
+                        // Refrescar la foto
+                        fetch(`http://192.168.68.58:8080/api/users/${user.id}`, {
+                          headers: { "Authorization": `Bearer ${localStorage.getItem('token')}` }
+                        })
+                          .then(res => res.json())
+                          .then(data => setProfilePictureUrl(data.profilePictureUrl || null));
+                      } catch (err) {
+                        toast.error("No se pudo subir la foto");
+                      } finally {
+                        setUploading(false);
+                      }
+                    }}
+                  />
+                </label>
+              </form>
+            </div>
             <div>
               <CardTitle className="text-foreground">{user?.name}</CardTitle>
               <CardDescription>{user?.email}</CardDescription>

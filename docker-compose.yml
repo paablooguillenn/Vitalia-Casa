@@ -41,6 +41,8 @@ services:
     depends_on:  
       postgres:
         condition: service_healthy
+    volumes:
+      - ./profile_pictures:/app/profile_pictures
 
 volumes:
   postgres_data:

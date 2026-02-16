@@ -33,7 +33,7 @@ export default function NewAppointmentPage() {
   // Fetch doctors
   useEffect(() => {
     setLoadingDoctors(true)
-    fetch("http://172.20.10.4:8080/api/doctors", {
+    fetch("http://192.168.68.58:8080/api/doctors", {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
@@ -91,7 +91,7 @@ export default function NewAppointmentPage() {
     const startISO = new Date(date); startISO.setHours(0,0,0,0)
     const endISO = new Date(date); endISO.setHours(23,59,59,999)
     
-    fetch(`http://172.20.10.4:8080/api/appointments/doctor/${selectedDoctor}/range?start=${startISO.toISOString()}&end=${endISO.toISOString()}`, {
+    fetch(`http://192.168.68.58:8080/api/appointments/doctor/${selectedDoctor}/range?start=${startISO.toISOString()}&end=${endISO.toISOString()}`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
@@ -126,7 +126,7 @@ export default function NewAppointmentPage() {
     const dateTime = new Date(selectedDate)
     dateTime.setHours(Number(hour), Number(minute), 0, 0)
     try {
-      const res = await fetch("http://172.20.10.4:8080/api/appointments", {
+      const res = await fetch("http://192.168.68.58:8080/api/appointments", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -14,8 +14,20 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<User | null>(() => {
+    // Recuperar usuario de localStorage si existe
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const role = typeof window !== "undefined" ? localStorage.getItem("role") : null;
+    const id = typeof window !== "undefined" ? localStorage.getItem("userId") : null;
+    const name = typeof window !== "undefined" ? localStorage.getItem("userName") : null;
+    const email = typeof window !== "undefined" ? localStorage.getItem("userEmail") : null;
+    if (token && role && id && name && email) {
+      return { id, name, email, role } as User;
+    }
+    return null;
+  });
   const router = useRouter()
 
   const redirectByRole = useCallback(
@@ -38,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(
     async (email: string, password: string): Promise<boolean> => {
       try {
-        const res = await fetch("http://172.20.10.4:8080/api/auth/login", {
+        const res = await fetch("http://192.168.68.58:8080/api/auth/login", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -50,6 +62,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // data: { jwt, rol, id }
         localStorage.setItem("token", data.jwt);
         localStorage.setItem("role", data.rol);
+        localStorage.setItem("userId", data.id ? String(data.id) : "");
+        localStorage.setItem("userName", data.nombre || "");
+        localStorage.setItem("userEmail", email);
         const userObj = {
           id: data.id ? String(data.id) : "",
           name: data.nombre || "",
@@ -69,9 +84,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 
   const logout = useCallback(() => {
-    setUser(null)
-    router.push("/login")
-  }, [router])
+    setUser(null);
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("userName");
+    localStorage.removeItem("userEmail");
+    router.push("/login");
+  }, [router]);
 
   return (
     <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout }}>

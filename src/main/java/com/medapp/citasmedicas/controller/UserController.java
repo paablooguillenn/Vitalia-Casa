@@ -19,6 +19,7 @@ public class UserController {
         private Long id;
         private String email;
         private String nombre;
+        private String telefono;
         private String role;
         private String profilePictureUrl;
 
@@ -26,6 +27,7 @@ public class UserController {
             this.id = user.getId();
             this.email = user.getEmail();
             this.nombre = user.getNombre();
+            this.telefono = user.getTelefono();
             this.profilePictureUrl = user.getProfilePictureUrl();
             if (user.getRole() != null) {
                 switch (user.getRole()) {
@@ -43,6 +45,8 @@ public class UserController {
         public void setEmail(String email) { this.email = email; }
         public String getNombre() { return nombre; }
         public void setNombre(String nombre) { this.nombre = nombre; }
+        public String getTelefono() { return telefono; }
+        public void setTelefono(String telefono) { this.telefono = telefono; }
         public String getRole() { return role; }
         public void setRole(String role) { this.role = role; }
         public String getProfilePictureUrl() { return profilePictureUrl; }
@@ -187,7 +191,7 @@ public class UserController {
         // Si es admin, puede actualizar cualquier perfil
         if (authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
             user.setNombre(userUpdate.getNombre());
-            // Puedes añadir aquí más campos editables si lo deseas
+            user.setTelefono(userUpdate.getTelefono());
             userRepo.save(user);
             return ResponseEntity.ok(new UserDTO(user));
         }
@@ -195,7 +199,7 @@ public class UserController {
         String email = authentication.getName();
         if (user.getEmail().equals(email)) {
             user.setNombre(userUpdate.getNombre());
-            // Puedes añadir aquí más campos editables si lo deseas
+            user.setTelefono(userUpdate.getTelefono());
             userRepo.save(user);
             return ResponseEntity.ok(new UserDTO(user));
         }

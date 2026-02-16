@@ -44,7 +44,7 @@ export default function DoctorAgendaPage() {
       console.log("DoctorAgenda: doctorId desde user.doctor.id", user.doctor.id);
     } else {
       // Buscar doctorId por userId
-      fetch(`http://172.20.10.4:8080/api/doctors?userId=${user.id}`, {
+      fetch(`http://192.168.68.58:8080/api/doctors?userId=${user.id}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }

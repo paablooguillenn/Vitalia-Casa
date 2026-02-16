@@ -22,7 +22,7 @@ export default function PatientAppointmentsPage() {
   useEffect(() => {
     if (!user?.id) return;
     setLoading(true);
-    fetch(`http://172.20.10.4:8080/api/users/${user.id}/appointments`, {
+    fetch(`http://192.168.68.58:8080/api/users/${user.id}/appointments`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }

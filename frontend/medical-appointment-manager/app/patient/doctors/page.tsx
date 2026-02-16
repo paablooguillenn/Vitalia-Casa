@@ -28,7 +28,7 @@ export default function PatientDoctorsPage() {
     }
 
     setLoading(true)
-    fetch("http://172.20.10.4:8080/api/doctors", {
+    fetch("http://192.168.68.58:8080/api/doctors", {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -54,7 +54,7 @@ export default function PatientDoctorsPage() {
     }
 
     setLoadingSpecialties(true)
-    fetch("http://172.20.10.4:8080/api/doctors/specialties", {
+    fetch("http://192.168.68.58:8080/api/doctors/specialties", {
       headers: {
         'Authorization': `Bearer ${token}`
       }

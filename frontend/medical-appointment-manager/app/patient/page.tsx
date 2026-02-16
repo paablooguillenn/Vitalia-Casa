@@ -1,11 +1,11 @@
+
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useAuth } from "@/lib/auth-context"
-import { useEffect, useState } from "react"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -46,7 +46,7 @@ export default function PatientDashboard() {
     if (!user?.id) return;
     setLoading(true);
     const token = localStorage.getItem('token');
-    fetch(`http://172.20.10.4:8080/api/appointments/patient/${user.id}`, {
+    fetch(`http://192.168.68.58:8080/api/appointments/patient/${user.id}`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -126,7 +126,7 @@ export default function PatientDashboard() {
           </button>
         </div>
         <h1 className="text-2xl font-bold text-foreground tracking-tight">
-          Hola, {user?.name ? user.name.split(" ")[0] : user?.nombre ? user.nombre.split(" ")[0] : "Paciente"}
+          Hola, {user?.name?.split(" ")[0] || user?.nombre?.split(" ")[0] || "Paciente"}
         </h1>
         <p className="text-muted-foreground text-sm">Resumen de sus citas medicas</p>
       </div>

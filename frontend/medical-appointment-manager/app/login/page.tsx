@@ -19,6 +19,7 @@ export default function LoginPage() {
   const [regName, setRegName] = useState("")
   const [regEmail, setRegEmail] = useState("")
   const [regPassword, setRegPassword] = useState("")
+  const [regPhone, setRegPhone] = useState("")
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +34,7 @@ export default function LoginPage() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch("http://172.20.10.4:8080/api/auth/register", {
+      const res = await fetch("http://192.168.68.58:8080/api/auth/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -42,6 +43,7 @@ export default function LoginPage() {
           nombre: regName,
           email: regEmail,
           password: regPassword,
+          telefono: regPhone,
         }),
       });
       if (res.ok) {
@@ -49,6 +51,7 @@ export default function LoginPage() {
         setRegName("");
         setRegEmail("");
         setRegPassword("");
+        setRegPhone("");
       } else {
         const data = await res.json().catch(() => ({}));
         toast.error(data.message || "Error al crear la cuenta.");
@@ -159,6 +162,17 @@ export default function LoginPage() {
                         placeholder="Juan Perez"
                         value={regName}
                         onChange={(e) => setRegName(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Label htmlFor="reg-phone">Número de teléfono</Label>
+                      <Input
+                        id="reg-phone"
+                        type="tel"
+                        placeholder="600123456"
+                        value={regPhone}
+                        onChange={(e) => setRegPhone(e.target.value)}
                         required
                       />
                     </div>

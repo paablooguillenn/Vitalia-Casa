@@ -22,6 +22,7 @@ public class User {
     private Role role;  
     
     private String nombre;
+    private String telefono;
 
     // URL o ruta de la foto de perfil
     private String profilePictureUrl;
@@ -58,11 +59,18 @@ public class User {
     public void setRole(Role role) {
         this.role = role;
     }
+
     public String getNombre() {
         return nombre;
     }
     public void setNombre(String nombre) {
         this.nombre = nombre;
+    }
+    public String getTelefono() {
+        return telefono;
+    }
+    public void setTelefono(String telefono) {
+        this.telefono = telefono;
     }
 
     public String getProfilePictureUrl() {
