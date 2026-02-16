@@ -66,17 +66,30 @@ public class AuthController {
             // Buscar usuario en la base de datos
             User user = userRepository.findByEmail(request.getEmail()).orElse(null);
             String rol = null;
+            String nombre = null;
             if (user != null) {
-                // Si el usuario está vinculado a un doctor, el rol es DOCTOR
                 if (doctorRepository.findByUser_Id(user.getId()) != null) {
-                    rol = "DOCTOR";
+                    rol = "doctor";
                 } else if (user.getRole() != null) {
-                    rol = user.getRole().name();
+                    switch (user.getRole()) {
+                        case ADMIN:
+                            rol = "admin";
+                            break;
+                        case PACIENTE:
+                            rol = "patient";
+                            break;
+                        case DOCTOR:
+                            rol = "doctor";
+                            break;
+                        default:
+                            rol = user.getRole().name().toLowerCase();
+                    }
                 }
+                nombre = user.getNombre();
             }
 
             Long id = (user != null) ? user.getId() : null;
-            return ResponseEntity.ok(new AuthResponseFull(jwt, rol, id));
+            return ResponseEntity.ok(new AuthResponseFull(jwt, rol, id, nombre));
         } catch (BadCredentialsException e) {
             return ResponseEntity.status(401).body("Credenciales inválidas");
         }
@@ -149,11 +162,13 @@ class AuthResponseFull {
     private String jwt;
     private String rol;
     private Long id;
+    private String nombre;
 
-    public AuthResponseFull(String jwt, String rol, Long id) {
+    public AuthResponseFull(String jwt, String rol, Long id, String nombre) {
         this.jwt = jwt;
         this.rol = rol;
         this.id = id;
+        this.nombre = nombre;
     }
 
     public String getJwt() { return jwt; }
@@ -164,4 +179,7 @@ class AuthResponseFull {
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+
+    public String getNombre() { return nombre; }
+    public void setNombre(String nombre) { this.nombre = nombre; }
 }

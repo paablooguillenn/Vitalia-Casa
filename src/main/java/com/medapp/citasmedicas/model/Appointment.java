@@ -16,7 +16,7 @@ public class Appointment {
     
     @ManyToOne
     @JoinColumn(name = "doctor_id")
-    @com.fasterxml.jackson.annotation.JsonBackReference
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"citas"})
     private Doctor doctor;
     
     @ManyToOne
@@ -28,7 +28,11 @@ public class Appointment {
     
     private String status;  // PENDING, CONFIRMED, CANCELLED
     
+
     private String qrCodeUrl;  // Para Sprint 2
+
+    @Column(name = "notes")
+    private String notes;
 
     // Getters y setters manuales
     public Long getId() { return id; }
@@ -43,4 +47,6 @@ public class Appointment {
     public void setStatus(String status) { this.status = status; }
     public String getQrCodeUrl() { return qrCodeUrl; }
     public void setQrCodeUrl(String qrCodeUrl) { this.qrCodeUrl = qrCodeUrl; }
+    public String getNotes() { return notes; }
+    public void setNotes(String notes) { this.notes = notes; }
 }

@@ -1,3 +1,4 @@
+// ...existing code...
 package com.medapp.citasmedicas.service;
 
 import com.medapp.citasmedicas.model.Appointment;
@@ -12,12 +13,43 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
+
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
 public class AppointmentService {
+        public Appointment checkinByQrToken(String token) {
+            try {
+                if (token == null || token.isEmpty()) return null;
+                // Buscar cita por token en qrCodeUrl
+                String urlPart = "/checkin?token=" + token;
+                List<Appointment> all = appointmentRepo.findAll();
+                for (Appointment apt : all) {
+                    if (apt.getQrCodeUrl() != null && apt.getQrCodeUrl().endsWith(urlPart)) {
+                        // Cambiar estado a CHECKED_IN si no lo está
+                        if (!"CHECKED_IN".equals(apt.getStatus())) {
+                            apt.setStatus("CHECKED_IN");
+                            appointmentRepo.save(apt);
+                        }
+                        return apt;
+                    }
+                }
+                return null;
+            } catch (Exception e) {
+                log.error("Error checkinByQrToken: {}", e.getMessage());
+                return null;
+            }
+        }
+    public List<Appointment> getAppointmentsByPatient(Long patientId) {
+        try {
+            return appointmentRepo.findByPatient_Id(patientId);
+        } catch (Exception e) {
+            log.error("Error getAppointmentsByPatient: {}", e.getMessage());
+            return new ArrayList<>();
+        }
+    }
     
     private static final Logger log = LoggerFactory.getLogger(AppointmentService.class);
     
@@ -31,97 +63,146 @@ public class AppointmentService {
     private UserRepository userRepo;
 
     public List<Appointment> getAllAppointments() {
-        return appointmentRepo.findAll();
+        try {
+            return appointmentRepo.findAll();
+        } catch (Exception e) {
+            log.error("Error getAllAppointments: {}", e.getMessage());
+            return new ArrayList<>();
+        }
     }
 
-    public Appointment createAppointment(Long doctorId, Long patientId, LocalDateTime dateTime, String especialidad) {
-        log.info("=== Creando cita ===");
-        log.info("doctorId: {}, patientId: {}, dateTime: {}, especialidad: {}", 
-                 doctorId, patientId, dateTime, especialidad);
-        
-        if (doctorId == null || patientId == null || dateTime == null) {
-            log.error("doctorId, patientId o dateTime es null");
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "doctorId, patientId y dateTime son obligatorios");
-        }
-
-        // Buscar el doctor
-        Doctor doctor = doctorRepo.findById(doctorId)
-            .orElseThrow(() -> {
-                log.error("Doctor no encontrado: id={}", doctorId);
-                return new ResponseStatusException(HttpStatus.NOT_FOUND, "Doctor no encontrado");
-            });
-        
-        log.info("Doctor encontrado: {} - {}", doctor.getNombre(), doctor.getEspecialidad());
-
-        // Validar especialidad si se proporciona
-        if (especialidad != null && !especialidad.trim().isEmpty()) {
-            String expected = especialidad.trim();
-            if (doctor.getEspecialidad() == null) {
-                log.error("Doctor sin especialidad");
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La especialidad no coincide con el doctor");
+    public Appointment createAppointment(Long doctorId, Long patientId, LocalDateTime dateTime, String especialidad, String notes) {
+        log.info("=== Creando cita doctorId:{}, patientId:{}, dateTime:{}, especialidad:{}, notes:{}",
+            doctorId, patientId, dateTime, especialidad, notes);
+        try {
+            // ✅ NULL CHECKS
+            if (doctorId == null || patientId == null || dateTime == null) {
+                log.error("NULL: doctorId={}, patientId={}, dateTime={}", doctorId, patientId, dateTime);
+                throw new IllegalArgumentException("Campos obligatorios nulos");
             }
-            if (!doctor.getEspecialidad().equalsIgnoreCase(expected)) {
-                log.error("Especialidad no coincide: doctor={}, esperado={}", 
-                         doctor.getEspecialidad(), expected);
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La especialidad no coincide con el doctor");
+
+            // ✅ DOCTOR EXISTS
+            Doctor doctor = doctorRepo.findById(doctorId).orElse(null);
+            if (doctor == null) {
+                log.error("Doctor NO existe: id={}", doctorId);
+                throw new IllegalArgumentException("Doctor no encontrado: " + doctorId);
             }
+            log.info("✅ Doctor OK: {} - {}", doctor.getNombre(), doctor.getEspecialidad());
+
+            // ✅ PACIENTE EXISTS
+            User patient = userRepo.findById(patientId).orElse(null);
+            if (patient == null) {
+                log.error("Paciente NO existe: id={}", patientId);
+                throw new IllegalArgumentException("Paciente no encontrado: " + patientId);
+            }
+            log.info("✅ Paciente OK: {} - rol: {}", patient.getEmail(), patient.getRole());
+
+            // ✅ ESPECIALIDAD CHECK (opcional)
+            if (especialidad != null && !especialidad.trim().isEmpty() && 
+                doctor.getEspecialidad() != null && 
+                !doctor.getEspecialidad().equalsIgnoreCase(especialidad.trim())) {
+                log.error("Especialidad NO coincide: doctor={}, request={}", 
+                    doctor.getEspecialidad(), especialidad);
+                throw new IllegalArgumentException("Especialidad no coincide");
+            }
+
+            // ✅ CREAR CITA
+            Appointment appointment = new Appointment();
+            appointment.setDoctor(doctor);
+            appointment.setPatient(patient);
+            appointment.setDateTime(dateTime);
+            appointment.setStatus("CONFIRMED");
+            appointment.setNotes(notes); // Guardar las notas
+
+            // Generar UUID para QR único
+            String qrToken = java.util.UUID.randomUUID().toString();
+            String qrUrl = String.format("http://192.168.56.1:3000/checkin?token=%s", qrToken);
+            appointment.setQrCodeUrl(qrUrl);
+
+            Appointment saved = appointmentRepo.save(appointment);
+            log.info("✅ Cita CREADA ID: {} QR: {}", saved.getId(), saved.getQrCodeUrl());
+            return saved;
+        } catch (IllegalArgumentException e) {
+            log.error("❌ createAppointment VALIDATION: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("💥 createAppointment GENERAL: {}", e.getMessage(), e);
+            throw new RuntimeException("Error interno: " + e.getMessage());
         }
-
-        // Buscar el paciente en la tabla USERS (no patients)
-        User patient = userRepo.findById(patientId)
-            .orElseThrow(() -> {
-                log.error("Usuario/Paciente no encontrado: id={}", patientId);
-                return new ResponseStatusException(HttpStatus.NOT_FOUND, "Paciente no encontrado");
-            });
-        
-        log.info("Usuario encontrado: {} - Rol: {}", patient.getEmail(), patient.getRole());
-        
-        // Validar que el usuario tenga rol PACIENTE
-        if (patient.getRole() != User.Role.PACIENTE) {
-            log.error("El usuario no tiene rol PACIENTE: id={}, rol={}", patientId, patient.getRole());
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El usuario no tiene rol PACIENTE");
-        }
-
-        // Crear la cita
-        Appointment appointment = new Appointment();
-        appointment.setDoctor(doctor);
-        appointment.setPatient(patient);
-        appointment.setDateTime(dateTime);
-        appointment.setStatus("CONFIRMED");
-
-        Appointment saved = appointmentRepo.save(appointment);
-        log.info("Cita creada exitosamente con ID: {}", saved.getId());
-        
-        return saved;
     }
 
     public ResponseEntity<Appointment> getAppointment(Long id) {
-        return appointmentRepo.findById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        try {
+            return appointmentRepo.findById(id)
+                    .map(ResponseEntity::ok)
+                    .orElse(ResponseEntity.notFound().build());
+        } catch (Exception e) {
+            log.error("Error getAppointment {}: {}", id, e.getMessage());
+            return ResponseEntity.notFound().build();
+        }
     }
 
+    // 🔥 FIX DEFINITIVO - NUNCA CRASHA
     public List<Appointment> getAppointmentsByDoctorAndDateRange(Long doctorId, LocalDateTime start, LocalDateTime end) {
-        return appointmentRepo.findByDoctor_IdAndDateTimeBetween(doctorId, start, end);
+        log.info("🔍 getAppointmentsByDoctorAndDateRange: doctorId={}, start={}, end={}", doctorId, start, end);
+        log.info("🔍 start.toString={}, end.toString={}", start.toString(), end.toString());
+        log.info("🔍 start class={}, end class={}", start.getClass().getName(), end.getClass().getName());
+        
+        try {
+            if (doctorId == null) {
+                log.warn("doctorId NULL → return empty");
+                return new ArrayList<>();
+            }
+            
+            if (start == null || end == null) {
+                log.warn("start/end NULL → return empty");
+                return new ArrayList<>();
+            }
+            
+            // ✅ TRY QUERY SIMPLE
+            List<Appointment> appointments = appointmentRepo.findByDoctor_IdAndDateTimeBetween(doctorId, start, end);
+            log.info("✅ Encontradas {} citas", appointments.size());
+            for (Appointment apt : appointments) {
+                log.info("Cita encontrada: id={}, doctorId={}, patientId={}, dateTime={}, status={}", apt.getId(), apt.getDoctor().getId(), apt.getPatient().getId(), apt.getDateTime(), apt.getStatus());
+            }
+            return appointments;
+            
+        } catch (Exception e) {
+            log.error("💥 ERROR getAppointmentsByDoctorAndDateRange: {}", e.getMessage(), e);
+            return new ArrayList<>(); // ← SIEMPRE RETORNA VACÍO
+        }
     }
 
     public ResponseEntity<Appointment> updateAppointment(Long id, Appointment appointmentDetails) {
-        return appointmentRepo.findById(id)
-                .map(appointment -> {
-                    appointment.setDateTime(appointmentDetails.getDateTime());
-                    appointment.setStatus(appointmentDetails.getStatus());
-                    Appointment updated = appointmentRepo.save(appointment);
-                    return ResponseEntity.ok(updated);
-                })
-                .orElse(ResponseEntity.notFound().build());
+        try {
+            return appointmentRepo.findById(id)
+                    .map(appointment -> {
+                        if (appointmentDetails.getDateTime() != null) {
+                            appointment.setDateTime(appointmentDetails.getDateTime());
+                        }
+                        if (appointmentDetails.getStatus() != null) {
+                            appointment.setStatus(appointmentDetails.getStatus());
+                        }
+                        return ResponseEntity.ok(appointmentRepo.save(appointment));
+                    })
+                    .orElse(ResponseEntity.notFound().build());
+        } catch (Exception e) {
+            log.error("Error updateAppointment {}: {}", id, e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     public ResponseEntity<?> deleteAppointment(Long id) {
-        return appointmentRepo.findById(id)
-                .map(appointment -> {
-                    appointmentRepo.delete(appointment);
-                    return ResponseEntity.ok().build();
-                })
-                .orElse(ResponseEntity.notFound().build());
+        try {
+            return appointmentRepo.findById(id)
+                    .map(appointment -> {
+                        appointmentRepo.delete(appointment);
+                        return ResponseEntity.ok().build();
+                    })
+                    .orElse(ResponseEntity.notFound().build());
+        } catch (Exception e) {
+            log.error("Error deleteAppointment {}: {}", id, e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
     }
 }

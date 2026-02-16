@@ -1,7 +1,8 @@
+
 package com.medapp.citasmedicas.controller;
 
 import com.medapp.citasmedicas.model.User;
-import com.medapp.citasmedicas.repository.UserRepository; 
+import com.medapp.citasmedicas.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -13,6 +14,41 @@ import java.util.List;
 @RequestMapping("/api/users")
 @CrossOrigin(origins = "*")
 public class UserController {
+    // DTO para exponer usuarios con rol en inglés/minúsculas
+    public static class UserDTO {
+        private Long id;
+        private String email;
+        private String nombre;
+        private String role;
+        private String profilePictureUrl;
+
+        public UserDTO(User user) {
+            this.id = user.getId();
+            this.email = user.getEmail();
+            this.nombre = user.getNombre();
+            this.profilePictureUrl = user.getProfilePictureUrl();
+            if (user.getRole() != null) {
+                switch (user.getRole()) {
+                    case ADMIN: this.role = "admin"; break;
+                    case PACIENTE: this.role = "patient"; break;
+                    case DOCTOR: this.role = "doctor"; break;
+                    default: this.role = user.getRole().name().toLowerCase();
+                }
+            }
+        }
+        // Getters y setters
+        public Long getId() { return id; }
+        public void setId(Long id) { this.id = id; }
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
+        public String getNombre() { return nombre; }
+        public void setNombre(String nombre) { this.nombre = nombre; }
+        public String getRole() { return role; }
+        public void setRole(String role) { this.role = role; }
+        public String getProfilePictureUrl() { return profilePictureUrl; }
+        public void setProfilePictureUrl(String profilePictureUrl) { this.profilePictureUrl = profilePictureUrl; }
+    }
+        private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(UserController.class);
     // Endpoint para subir foto de perfil
     @PostMapping(value = "/{id}/profile-picture", consumes = "multipart/form-data")
     public ResponseEntity<?> uploadProfilePicture(@PathVariable Long id, @RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
@@ -48,7 +84,7 @@ public class UserController {
      * Accesible por cualquier usuario autenticado.
      */
     @GetMapping("/{id}/appointments")
-    public ResponseEntity<List<com.medapp.citasmedicas.model.Appointment>> getPatientAppointments(@PathVariable Long id) {
+    public ResponseEntity<List<com.medapp.citasmedicas.dto.AppointmentDTO>> getPatientAppointments(@PathVariable Long id) {
         User user = userRepo.findById(id).orElse(null);
         if (user == null) return ResponseEntity.notFound().build();
         List<com.medapp.citasmedicas.model.Appointment> appointments;
@@ -62,14 +98,43 @@ public class UserController {
         } else {
             appointments = appointmentRepo.findByPatient_Id(id);
         }
-        return ResponseEntity.ok(appointments);
+        // LOG: Mostrar información de cada cita y su doctor
+        log.info("=== LOG citas para user_id={} ===", id);
+        for (com.medapp.citasmedicas.model.Appointment apt : appointments) {
+            log.info("Cita id={}, doctor={}, paciente={}, fecha={}, status={}",
+                apt.getId(),
+                (apt.getDoctor() != null ? (apt.getDoctor().getId() + " - " + apt.getDoctor().getNombre()) : "null"),
+                (apt.getPatient() != null ? (apt.getPatient().getId() + " - " + apt.getPatient().getNombre()) : "null"),
+                apt.getDateTime(),
+                apt.getStatus()
+            );
+        }
+        List<com.medapp.citasmedicas.dto.AppointmentDTO> dtos = appointments.stream().map(apt ->
+            new com.medapp.citasmedicas.dto.AppointmentDTO(
+                apt.getId(),
+                apt.getDoctor() != null ? new com.medapp.citasmedicas.dto.AppointmentDTO.DoctorDTO(
+                    apt.getDoctor().getId(),
+                    apt.getDoctor().getNombre(),
+                    apt.getDoctor().getEspecialidad()
+                ) : null,
+                apt.getPatient() != null ? new com.medapp.citasmedicas.dto.AppointmentDTO.UserDTO(
+                    apt.getPatient().getId(),
+                    apt.getPatient().getNombre()
+                ) : null,
+                apt.getDateTime(),
+                apt.getStatus(),
+                apt.getQrCodeUrl(),
+                apt.getNotes()
+            )
+        ).toList();
+        return ResponseEntity.ok(dtos);
     }
 
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public List<User> getAllUsers() {
-        return userRepo.findAll();
+    public List<UserDTO> getAllUsers() {
+        return userRepo.findAll().stream().map(UserDTO::new).toList();
     }
 
     @Autowired
@@ -94,18 +159,18 @@ public class UserController {
      * Permite obtener el perfil de un usuario solo si es el propio usuario autenticado o un admin.
      */
     @GetMapping("/{id}")
-    public ResponseEntity<User> getUser(@PathVariable Long id, Authentication authentication) {
+    public ResponseEntity<UserDTO> getUser(@PathVariable Long id, Authentication authentication) {
         User user = userRepo.findById(id).orElse(null);
         if (user == null) return ResponseEntity.notFound().build();
 
         // Si es admin, puede ver cualquier perfil
         if (authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
-            return ResponseEntity.ok(user);
+            return ResponseEntity.ok(new UserDTO(user));
         }
         // Si el usuario autenticado es el mismo que el solicitado
         String email = authentication.getName();
         if (user.getEmail().equals(email)) {
-            return ResponseEntity.ok(user);
+            return ResponseEntity.ok(new UserDTO(user));
         }
         // Si no, denegar acceso
         return ResponseEntity.status(403).build();
@@ -115,7 +180,7 @@ public class UserController {
      * Permite actualizar el perfil de un usuario solo si es el propio usuario autenticado o un admin.
      */
     @PutMapping("/{id}")
-    public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User userUpdate, Authentication authentication) {
+    public ResponseEntity<UserDTO> updateUser(@PathVariable Long id, @RequestBody User userUpdate, Authentication authentication) {
         User user = userRepo.findById(id).orElse(null);
         if (user == null) return ResponseEntity.notFound().build();
 
@@ -124,7 +189,7 @@ public class UserController {
             user.setNombre(userUpdate.getNombre());
             // Puedes añadir aquí más campos editables si lo deseas
             userRepo.save(user);
-            return ResponseEntity.ok(user);
+            return ResponseEntity.ok(new UserDTO(user));
         }
         // Si el usuario autenticado es el mismo que el solicitado
         String email = authentication.getName();
@@ -132,7 +197,7 @@ public class UserController {
             user.setNombre(userUpdate.getNombre());
             // Puedes añadir aquí más campos editables si lo deseas
             userRepo.save(user);
-            return ResponseEntity.ok(user);
+            return ResponseEntity.ok(new UserDTO(user));
         }
         // Si no, denegar acceso
         return ResponseEntity.status(403).build();

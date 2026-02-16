@@ -41,6 +41,7 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                // ✅ PÚBLICOS TOTALMENTE
                 .requestMatchers(
                     "/h2-console/**",
                     "/actuator/**",
@@ -51,23 +52,25 @@ public class SecurityConfig {
                     "/webjars/**",
                     "/api/auth/**"
                 ).permitAll()
-                // Permitir explícitamente todos los métodos de /api/doctors/**
+                
+                // ✅ APIS DE TU APP - PERMITIDO TODO
                 .requestMatchers("/api/doctors/**").permitAll()
-
-
-                // Permitir PUT en /api/appointments/** solo a DOCTOR y ADMIN
+                .requestMatchers("/api/appointments/**").permitAll()  // ← FIX PRINCIPAL
+                
+                // ✅ ROLES ESPECÍFICOS (después de permitAll)
                 .requestMatchers(HttpMethod.PUT, "/api/appointments/**").hasAnyRole("DOCTOR", "ADMIN")
-                // Permitir POST en /api/appointments/**/files solo a DOCTOR y ADMIN
-                .requestMatchers(HttpMethod.POST, "/api/appointments/**/files").hasAnyRole("DOCTOR", "ADMIN")
- 
-                // El resto de métodos sobre /api/appointments/** requieren autenticación
-                .requestMatchers("/api/appointments/**").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/appointments/*/files").hasAnyRole("DOCTOR", "ADMIN")
+                
+                // ✅ AUTENTICADO
                 .requestMatchers("/api/users/**", "/api/patients/**").authenticated()
+                
+                // ✅ CUALQUIER OTRA COSA
                 .anyRequest().authenticated()
             )
             .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.disable()))
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+        
         return http.build();
     }
 

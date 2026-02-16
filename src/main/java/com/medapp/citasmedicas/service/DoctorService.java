@@ -14,6 +14,9 @@ import java.util.List;
 
 @Service
 public class DoctorService {
+    public Doctor getDoctorByUserId(Long userId) {
+        return doctorRepo.findByUser_Id(userId);
+    }
     private static final Logger log = LoggerFactory.getLogger(DoctorService.class);
     @Autowired
     private DoctorRepository doctorRepo;

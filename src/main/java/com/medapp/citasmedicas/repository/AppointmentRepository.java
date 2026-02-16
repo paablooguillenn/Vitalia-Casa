@@ -8,6 +8,7 @@ import java.util.Optional;
 
 @Repository
 public interface AppointmentRepository extends JpaRepository<Appointment, Long> {
+        Appointment findByQrCodeUrl(String qrCodeUrl);
     List<Appointment> findByDoctor_IdAndDateTimeBetween(Long doctorId, java.time.LocalDateTime start, java.time.LocalDateTime end);
 
     List<Appointment> findByDoctor_Id(Long doctorId);
