@@ -1,4 +1,3 @@
-// ...existing code...
 
 package com.medapp.citasmedicas.controller;
 
@@ -18,6 +17,49 @@ import java.util.Map;
 @RequestMapping("/api/appointments")
 @CrossOrigin(origins = "*")
 public class AppointmentController {
+    // PATCH /api/appointments/{id} para editar fecha/hora/estado
+    @PatchMapping("/{id}")
+    public ResponseEntity<?> updateAppointment(@PathVariable Long id, @RequestBody Map<String, Object> updates, org.springframework.security.core.Authentication authentication) {
+        try {
+            Appointment apt = appointmentService.getAppointmentById(id);
+            if (apt == null) {
+                return ResponseEntity.status(404).body("Cita no encontrada");
+            }
+            // Permitir solo si el usuario es doctor o admin (opcional: validar más)
+            String userEmail = authentication.getName();
+            // Actualizar campos si están presentes
+            if (updates.containsKey("date") && updates.containsKey("time")) {
+                String date = updates.get("date").toString();
+                String time = updates.get("time").toString();
+                // Unir date y time a LocalDateTime
+                java.time.LocalDateTime dateTime = java.time.LocalDateTime.parse(date + "T" + time);
+                apt.setDateTime(dateTime);
+            }
+            if (updates.containsKey("status")) {
+                apt.setStatus(updates.get("status").toString());
+            }
+            appointmentService.saveAppointment(apt);
+            return ResponseEntity.ok("Cita actualizada correctamente");
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error al actualizar la cita: " + e.getMessage());
+        }
+    }
+    // PATCH /api/appointments/{id}/cancel
+    @PatchMapping("/{id}/cancel")
+    public ResponseEntity<?> cancelAppointment(@PathVariable Long id, org.springframework.security.core.Authentication authentication) {
+        try {
+            String userEmail = authentication.getName();
+            String debugInfo = appointmentService.cancelAppointmentDebug(id, userEmail);
+            if ("OK".equals(debugInfo)) {
+                return ResponseEntity.ok().body("Cita cancelada correctamente");
+            } else {
+                return ResponseEntity.status(403).body("No tienes permiso para cancelar esta cita o ya está cancelada. Debug: " + debugInfo);
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error al cancelar la cita: " + e.getMessage());
+        }
+    }
+    // ...resto de la clase...
         // Endpoint para check-in por QR
         @GetMapping("/checkin")
         public ResponseEntity<?> checkinByQrToken(@RequestParam String token) {

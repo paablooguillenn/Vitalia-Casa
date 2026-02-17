@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog"
 import { Search, Download, ChevronLeft, ChevronRight } from "lucide-react"
 import { toast } from "sonner"
 
@@ -21,6 +22,51 @@ export default function DoctorHistoryPage() {
   const [statusFilter, setStatusFilter] = useState("all")
   const [page, setPage] = useState(1)
   const [appointments, setAppointments] = useState<any[]>([]);
+  const [editApt, setEditApt] = useState<any | null>(null);
+  const [editDate, setEditDate] = useState("");
+  const [editTime, setEditTime] = useState("");
+  const [editStatus, setEditStatus] = useState("");
+  const [saving, setSaving] = useState(false);
+      // PATCH request to update appointment
+      const handleEditSave = async () => {
+        if (!editApt) return;
+        setSaving(true);
+        try {
+          const res = await fetch(`http://192.168.68.58:8080/api/appointments/${editApt.id}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({
+              date: editDate,
+              time: editTime,
+              status: editStatus
+            })
+          });
+          if (!res.ok) throw new Error('Error al actualizar la cita');
+          // Update local state optimistically
+          setAppointments(prev => prev.map(a => a.id === editApt.id ? {
+            ...a,
+            date: editDate,
+            time: editTime,
+            status: editStatus
+          } : a));
+          setEditApt(null);
+          toast.success('Cita actualizada');
+        } catch (e: any) {
+          toast.error(e.message || 'Error al actualizar la cita');
+        } finally {
+          setSaving(false);
+        }
+      };
+    // Reset edit form when opening modal
+    const openEditModal = (apt: any) => {
+      setEditApt(apt);
+      setEditDate(apt.date);
+      setEditTime(apt.time);
+      setEditStatus(apt.status);
+    };
   const { user } = useAuth();
   useEffect(() => {
     if (!user) return;
@@ -36,6 +82,7 @@ export default function DoctorHistoryPage() {
           'PENDING': 'PENDIENTE',
           'COMPLETED': 'COMPLETADA',
           'CANCELLED': 'CANCELADA',
+          'CHECKED_IN': 'EN CONSULTA',
         };
         const mapped = data.map((apt: any) => {
           const [date, time] = apt.dateTime ? apt.dateTime.split('T') : [null, null];
@@ -147,6 +194,54 @@ export default function DoctorHistoryPage() {
                           <QRCode id={`qr-${apt.id}`} value={apt.qrCodeUrl} size={64} />
                         </div>
                       )}
+                    </TableCell>
+                    <TableCell>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="secondary" size="sm" onClick={() => openEditModal(apt)}>
+                            Modificar
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Modificar cita</DialogTitle>
+                          </DialogHeader>
+                          <form className="flex flex-col gap-4">
+                            <div>
+                              <label className="block text-xs mb-1">Fecha</label>
+                              <Input type="date" value={editDate} onChange={e => setEditDate(e.target.value)} />
+                            </div>
+                            <div>
+                              <label className="block text-xs mb-1">Hora</label>
+                              <Input type="time" value={editTime} onChange={e => setEditTime(e.target.value)} />
+                            </div>
+                            <div>
+                              <label className="block text-xs mb-1">Estado</label>
+                              <Select value={editStatus} onValueChange={setEditStatus}>
+                                <SelectTrigger className="w-full">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="CONFIRMADA">Confirmada</SelectItem>
+                                  <SelectItem value="PENDIENTE">Pendiente</SelectItem>
+                                  <SelectItem value="COMPLETADA">Completada</SelectItem>
+                                  <SelectItem value="CANCELADA">Cancelada</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </form>
+                          <DialogFooter>
+                            <DialogClose asChild>
+                              <Button variant="outline">Cancelar</Button>
+                            </DialogClose>
+                            <DialogClose asChild>
+                              <Button type="button" onClick={handleEditSave} disabled={saving}>
+                                {saving ? 'Guardando...' : 'Guardar cambios'}
+                              </Button>
+                            </DialogClose>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
                     </TableCell>
                   </TableRow>
                 ))

@@ -63,7 +63,7 @@ export default function NewAppointmentPage() {
     // Definir rango de horas y duración
     const WORKING_HOURS = [
       { start: 9, end: 14 },   // 09:00-14:00
-      { start: 16, end: 20 }   // 16:00-20:00
+      { start: 16, end: 18 }   // 16:00-18:00
     ]
     const SLOT_MINUTES = 30
     

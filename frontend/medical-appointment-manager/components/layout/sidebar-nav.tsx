@@ -41,7 +41,7 @@ const navByRole: Record<UserRole, NavItem[]> = {
     { label: "Agenda", href: "/doctor/agenda", icon: CalendarRange },
     { label: "Disponibilidad", href: "/doctor/availability", icon: Clock },
     { label: "Historial", href: "/doctor/history", icon: History },
-    { label: "Codigo QR", href: "/doctor/qr", icon: QrCode },
+    { label: "Mi Perfil", href: "/doctor/profile", icon: UserCircle },
     { label: "Adjuntos", href: "/doctor/attachments", icon: Paperclip },
     { label: "Notificaciones", href: "/doctor/notifications", icon: Bell },
   ],

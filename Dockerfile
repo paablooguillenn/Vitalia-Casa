@@ -7,6 +7,7 @@ RUN mvn dependency:go-offline -B
 COPY src ./src
 COPY mvnw ./mvnw
 COPY .mvn .mvn
+RUN chmod +x ./mvnw
 RUN ./mvnw clean package -DskipTests -B
 
 # Etapa 2: Runtime ligera

@@ -10,8 +10,20 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   "EN CONSULTA": { label: "En Consulta", className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800" },
 }
 
+function normalizeStatus(status: string): string {
+  if (!status) return "";
+  const s = status.toUpperCase().replace(/_/g, " ").trim();
+  if (s === "EN CONSULTA" || s === "ENCONSULTA") return "EN CONSULTA";
+  if (s === "CONFIRMADA" || s === "CONFIRMADO" || s === "CONFIRMED") return "CONFIRMADA";
+  if (s === "PENDIENTE" || s === "PENDING") return "PENDIENTE";
+  if (s === "CANCELADA" || s === "CANCELADO" || s === "CANCELLED") return "CANCELADA";
+  if (s === "COMPLETADA" || s === "COMPLETADO" || s === "COMPLETED") return "COMPLETADA";
+  return s;
+}
+
 export function StatusBadge({ status }: { status: AppointmentStatus | string }) {
-  const config = statusConfig[status as AppointmentStatus];
+  const normalized = normalizeStatus(status as string);
+  const config = statusConfig[normalized as AppointmentStatus];
   if (!config) {
     return (
       <Badge variant="outline" className={cn("font-medium text-xs bg-gray-200 text-gray-700 border-gray-300")}>Desconocido</Badge>

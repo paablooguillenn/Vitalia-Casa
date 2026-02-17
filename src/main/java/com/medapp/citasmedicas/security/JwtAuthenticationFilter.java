@@ -32,14 +32,29 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = null;
         String username = null;
 
+        System.out.println("[JWT] Authorization header: " + authHeader);
+
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             token = authHeader.substring(7);
-            username = jwtUtil.extractUsername(token);
+            System.out.println("[JWT] Token recibido: " + token);
+            try {
+                username = jwtUtil.extractUsername(token);
+                System.out.println("[JWT] Username extraído: " + username);
+            } catch (Exception e) {
+                System.out.println("[JWT] Error extrayendo username: " + e.getMessage());
+            }
         }
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-            if (jwtUtil.validateToken(token, userDetails)) {
+            boolean valid = false;
+            try {
+                valid = jwtUtil.validateToken(token, userDetails);
+                System.out.println("[JWT] ¿Token válido?: " + valid);
+            } catch (Exception e) {
+                System.out.println("[JWT] Error validando token: " + e.getMessage());
+            }
+            if (valid) {
                 // Leer el rol del claim y crear authorities
                 String role = null;
                 try {
@@ -47,6 +62,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     if (claimRole != null) {
                         role = claimRole.toString();
                     }
+                    System.out.println("[JWT] Rol extraído: " + role);
                 } catch (Exception ignored) {}
                 java.util.Collection<? extends org.springframework.security.core.GrantedAuthority> authorities;
                 if (role != null) {
@@ -58,6 +74,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         userDetails, null, authorities);
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authToken);
+            } else {
+                System.out.println("[JWT] Token inválido para usuario: " + username);
             }
         }
         filterChain.doFilter(request, response);

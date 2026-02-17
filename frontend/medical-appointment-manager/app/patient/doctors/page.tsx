@@ -141,9 +141,17 @@ export default function PatientDoctorsPage() {
               <CardContent className="flex flex-col gap-4 p-6">
                 <div className="flex items-start gap-4">
                   <Avatar className="h-16 w-16 flex-shrink-0">
-                    <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-bold text-lg">
-                      {(doc.nombre || "Dr").split(" ").slice(0, 2).map((n: string) => n[0]).join("").toUpperCase()}
-                    </AvatarFallback>
+                    {doc.profilePictureUrl ? (
+                      <img
+                        src={`http://192.168.68.58:8080/${doc.profilePictureUrl.replace(/\\/g, '/')}`}
+                        alt={doc.nombre}
+                        className="object-cover w-full h-full rounded-full"
+                      />
+                    ) : (
+                      <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-bold text-lg">
+                        {(doc.nombre || "Dr").split(" ").slice(0, 2).map((n: string) => n[0]).join("").toUpperCase()}
+                      </AvatarFallback>
+                    )}
                   </Avatar>
                   
                   <div className="flex-1 min-w-0 space-y-1">

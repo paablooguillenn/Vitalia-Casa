@@ -1,4 +1,3 @@
-// ...existing code...
 package com.medapp.citasmedicas.service;
 
 import com.medapp.citasmedicas.model.Appointment;
@@ -20,37 +19,6 @@ import java.util.List;
 
 @Service
 public class AppointmentService {
-        public Appointment checkinByQrToken(String token) {
-            try {
-                if (token == null || token.isEmpty()) return null;
-                // Buscar cita por token en qrCodeUrl
-                String urlPart = "/checkin?token=" + token;
-                List<Appointment> all = appointmentRepo.findAll();
-                for (Appointment apt : all) {
-                    if (apt.getQrCodeUrl() != null && apt.getQrCodeUrl().endsWith(urlPart)) {
-                        // Cambiar estado a CHECKED_IN si no lo está
-                        if (!"CHECKED_IN".equals(apt.getStatus())) {
-                            apt.setStatus("CHECKED_IN");
-                            appointmentRepo.save(apt);
-                        }
-                        return apt;
-                    }
-                }
-                return null;
-            } catch (Exception e) {
-                log.error("Error checkinByQrToken: {}", e.getMessage());
-                return null;
-            }
-        }
-    public List<Appointment> getAppointmentsByPatient(Long patientId) {
-        try {
-            return appointmentRepo.findByPatient_Id(patientId);
-        } catch (Exception e) {
-            log.error("Error getAppointmentsByPatient: {}", e.getMessage());
-            return new ArrayList<>();
-        }
-    }
-    
     private static final Logger log = LoggerFactory.getLogger(AppointmentService.class);
     
     @Autowired
@@ -61,6 +29,68 @@ public class AppointmentService {
 
     @Autowired
     private UserRepository userRepo;
+
+    // Obtener cita por ID (null si no existe)
+    public Appointment getAppointmentById(Long id) {
+        try {
+            return appointmentRepo.findById(id).orElse(null);
+        } catch (Exception e) {
+            log.error("Error getAppointmentById {}: {}", id, e.getMessage());
+            return null;
+        }
+    }
+
+    // Guardar cita (crear o actualizar)
+    public Appointment saveAppointment(Appointment apt) {
+        try {
+            return appointmentRepo.save(apt);
+        } catch (Exception e) {
+            log.error("Error saveAppointment: {}", e.getMessage());
+            throw new RuntimeException("Error al guardar la cita");
+        }
+    }
+
+    // Cancelar cita: cualquier usuario autenticado puede cancelar cualquier cita
+    public String cancelAppointmentDebug(Long appointmentId, String userEmail) {
+        Appointment apt = appointmentRepo.findById(appointmentId).orElse(null);
+        if (apt == null) return "No se encontró la cita";
+        if ("CANCELLED".equalsIgnoreCase(apt.getStatus())) return "La cita ya está cancelada";
+        apt.setStatus("CANCELLED");
+        appointmentRepo.save(apt);
+        return "OK";
+    }
+
+    public Appointment checkinByQrToken(String token) {
+        try {
+            if (token == null || token.isEmpty()) return null;
+            // Buscar cita por token en qrCodeUrl
+            String urlPart = "/checkin?token=" + token;
+            List<Appointment> all = appointmentRepo.findAll();
+            for (Appointment apt : all) {
+                if (apt.getQrCodeUrl() != null && apt.getQrCodeUrl().endsWith(urlPart)) {
+                    // Cambiar estado a CHECKED_IN si no lo está
+                    if (!"CHECKED_IN".equals(apt.getStatus())) {
+                        apt.setStatus("CHECKED_IN");
+                        appointmentRepo.save(apt);
+                    }
+                    return apt;
+                }
+            }
+            return null;
+        } catch (Exception e) {
+            log.error("Error checkinByQrToken: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    public List<Appointment> getAppointmentsByPatient(Long patientId) {
+        try {
+            return appointmentRepo.findByPatient_Id(patientId);
+        } catch (Exception e) {
+            log.error("Error getAppointmentsByPatient: {}", e.getMessage());
+            return new ArrayList<>();
+        }
+    }
 
     public List<Appointment> getAllAppointments() {
         try {
@@ -73,7 +103,7 @@ public class AppointmentService {
 
     public Appointment createAppointment(Long doctorId, Long patientId, LocalDateTime dateTime, String especialidad, String notes) {
         log.info("=== Creando cita doctorId:{}, patientId:{}, dateTime:{}, especialidad:{}, notes:{}",
-            doctorId, patientId, dateTime, especialidad, notes);
+                doctorId, patientId, dateTime, especialidad, notes);
         try {
             // ✅ NULL CHECKS
             if (doctorId == null || patientId == null || dateTime == null) {
@@ -102,8 +132,15 @@ public class AppointmentService {
                 doctor.getEspecialidad() != null && 
                 !doctor.getEspecialidad().equalsIgnoreCase(especialidad.trim())) {
                 log.error("Especialidad NO coincide: doctor={}, request={}", 
-                    doctor.getEspecialidad(), especialidad);
+                        doctor.getEspecialidad(), especialidad);
                 throw new IllegalArgumentException("Especialidad no coincide");
+            }
+
+            // ✅ LIMITAR HORARIO DE CITAS: solo entre 9:00 y 18:00
+            int hour = dateTime.getHour();
+            if (hour < 9 || hour >= 18) {
+                log.error("Intento de crear cita fuera de horario permitido: {}", dateTime);
+                throw new IllegalArgumentException("Las citas solo pueden agendarse entre las 09:00 y las 18:00");
             }
 
             // ✅ CREAR CITA
@@ -163,7 +200,8 @@ public class AppointmentService {
             List<Appointment> appointments = appointmentRepo.findByDoctor_IdAndDateTimeBetween(doctorId, start, end);
             log.info("✅ Encontradas {} citas", appointments.size());
             for (Appointment apt : appointments) {
-                log.info("Cita encontrada: id={}, doctorId={}, patientId={}, dateTime={}, status={}", apt.getId(), apt.getDoctor().getId(), apt.getPatient().getId(), apt.getDateTime(), apt.getStatus());
+                log.info("Cita encontrada: id={}, doctorId={}, patientId={}, dateTime={}, status={}", 
+                    apt.getId(), apt.getDoctor().getId(), apt.getPatient().getId(), apt.getDateTime(), apt.getStatus());
             }
             return appointments;
             
@@ -204,5 +242,5 @@ public class AppointmentService {
             log.error("Error deleteAppointment {}: {}", id, e.getMessage());
             return ResponseEntity.internalServerError().build();
         }
-    }
-}
+    } 
+} 

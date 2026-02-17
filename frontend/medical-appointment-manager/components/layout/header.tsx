@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth-context"
 import { useEffect, useState } from "react"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -104,6 +104,12 @@ export function Header() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-8 px-2 hover:bg-accent">
               <Avatar className="h-7 w-7">
+                {user?.profilePictureUrl ? (
+                  <AvatarImage
+                    src={`http://192.168.68.58:8080/${user.profilePictureUrl.replace(/\\/g, "/")}?t=${Date.now()}`}
+                    alt="Foto de perfil"
+                  />
+                ) : null}
                 <AvatarFallback className="bg-gradient-to-br from-primary to-primary-foreground/20 text-primary-foreground text-xs font-bold">
                   {displayData.initials}
                 </AvatarFallback>

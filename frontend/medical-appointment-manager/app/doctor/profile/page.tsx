@@ -11,7 +11,7 @@ import { Separator } from "@/components/ui/separator"
 import { Save } from "lucide-react"
 import { toast } from "sonner"
 
-export default function PatientProfilePage() {
+export default function DoctorProfilePage() {
   const { user, setUser } = useAuth()
   const [name, setName] = useState(user?.name ?? "")
   const [email, setEmail] = useState(user?.email ?? "")
@@ -82,7 +82,7 @@ export default function PatientProfilePage() {
             <div className="relative">
               <Avatar className="h-16 w-16">
                 {profilePictureUrl ? (
-                  <AvatarImage src={`http://192.168.68.58:8080/${profilePictureUrl.replace(/\\/g, '/')}?t=${imageTimestamp}`} alt="Foto de perfil" />
+                  <AvatarImage src={`http://192.168.68.58:8080/${profilePictureUrl.replace(/\\/g, '/')}` + `?t=${imageTimestamp}`} alt="Foto de perfil" />
                 ) : null}
                 <AvatarFallback className="bg-primary/10 text-primary text-lg font-semibold">
                   {initials}
@@ -120,7 +120,6 @@ export default function PatientProfilePage() {
                           .then(data => {
                             setProfilePictureUrl(data.profilePictureUrl || null);
                             setImageTimestamp(Date.now());
-                            // Actualizar el usuario global para que el header y otros componentes vean la nueva foto
                             setUser({
                               ...user,
                               profilePictureUrl: data.profilePictureUrl || null

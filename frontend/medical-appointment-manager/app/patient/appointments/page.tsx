@@ -6,6 +6,7 @@ import { StatusBadge } from "@/components/shared/status-badge"
 import type { AppointmentStatus } from "@/lib/types"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription, DialogClose } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { CalendarDays, Clock, ChevronLeft, ChevronRight } from "lucide-react"
 
@@ -17,6 +18,9 @@ export default function PatientAppointmentsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [page, setPage] = useState(1)
   const [appointments, setAppointments] = useState<any[]>([])
+  const [cancelDialog, setCancelDialog] = useState<{ open: boolean, aptId?: number }>({ open: false })
+  const [cancelLoading, setCancelLoading] = useState(false)
+  const [cancelError, setCancelError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -104,10 +108,10 @@ export default function PatientAppointmentsPage() {
           </Card>
         ) : (
           paginated.map((apt) => {
-            // Adaptar campos según el modelo del backend
             const doctorName = apt.doctor?.nombre || apt.doctorName || "";
             const specialty = apt.doctor?.especialidad || apt.specialty || "";
             const dateObj = apt.dateTime ? new Date(apt.dateTime) : null;
+            const canCancel = apt.status === "CONFIRMADA" || apt.status === "PENDIENTE";
             return (
               <Card key={apt.id} className="transition-shadow hover:shadow-md">
                 <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -128,12 +132,78 @@ export default function PatientAppointmentsPage() {
                       </span>
                     </div>
                     <StatusBadge status={apt.status} />
+                    {canCancel && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setCancelDialog({ open: true, aptId: apt.id })}
+                      >
+                        Cancelar
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
             );
           })
         )}
+        {/* Dialog de confirmación de cancelación (fuera del map) */}
+        <Dialog open={cancelDialog.open} onOpenChange={open => setCancelDialog(v => ({ ...v, open }))}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Cancelar cita</DialogTitle>
+              <DialogDescription>¿Seguro que quieres cancelar esta cita? Esta acción no se puede deshacer.</DialogDescription>
+            </DialogHeader>
+            {cancelError && (
+              <div className="text-sm text-red-500 mb-2">{cancelError}</div>
+            )}
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button variant="outline" disabled={cancelLoading}>No, volver</Button>
+              </DialogClose>
+              <Button
+                variant="destructive"
+                disabled={cancelLoading}
+                onClick={async () => {
+                  if (!cancelDialog.aptId) return;
+                  setCancelLoading(true);
+                  setCancelError(null);
+                  try {
+                    const res = await fetch(`http://192.168.68.58:8080/api/appointments/${cancelDialog.aptId}/cancel`, {
+                      method: "PATCH",
+                      headers: {
+                        "Authorization": `Bearer ${localStorage.getItem('token')}`,
+                        "Content-Type": "application/json"
+                      }
+                    });
+                    if (!res.ok) {
+                      let msg = `No se pudo cancelar la cita (Status: ${res.status})`;
+                      try {
+                        const data = await res.json();
+                        if (data && data.message) msg += `: ${data.message}`;
+                        else if (typeof data === 'string') msg += `: ${data}`;
+                      } catch {
+                        try {
+                          const text = await res.text();
+                          if (text) msg += `: ${text}`;
+                        } catch {}
+                      }
+                      throw new Error(msg);
+                    }
+                    setAppointments((prev: any[]) => prev.map(a => a.id === cancelDialog.aptId ? { ...a, status: "CANCELADA" } : a));
+                    setCancelDialog({ open: false });
+                  } catch (err: any) {
+                    setCancelError(err.message || "No se pudo cancelar la cita");
+                  } finally {
+                    setCancelLoading(false);
+                  }
+                }}
+              >
+                Sí, cancelar cita
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {totalPages > 1 && (

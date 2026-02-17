@@ -59,9 +59,14 @@ export default function PatientDashboard() {
           'PENDING': 'PENDIENTE',
           'COMPLETED': 'COMPLETADA',
           'CANCELLED': 'CANCELADA',
+          'CHECKED_IN': 'EN CONSULTA',
         };
         const mapped = data.map((apt: any) => {
           const [date, time] = apt.dateTime ? apt.dateTime.split('T') : [null, null];
+          // Log para debug de status crudo
+          if (typeof window !== 'undefined') {
+            console.log('STATUS CRUDO:', apt.status);
+          }
           return {
             ...apt,
             date: date,

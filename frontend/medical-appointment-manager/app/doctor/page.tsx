@@ -31,6 +31,7 @@ export default function DoctorDashboard() {
           'PENDING': 'PENDIENTE',
           'COMPLETED': 'COMPLETADA',
           'CANCELLED': 'CANCELADA',
+          'CHECKED_IN': 'EN CONSULTA',
         };
         const mapped = data.map((apt) => ({
           ...apt,

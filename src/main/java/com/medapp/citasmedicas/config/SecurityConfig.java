@@ -50,20 +50,18 @@ public class SecurityConfig {
                     "/v3/api-docs/**",
                     "/v3/api-docs.yaml",
                     "/webjars/**",
-                    "/api/auth/**"
+                    "/api/auth/**",
+                    "/profile_pictures/**" // ← PERMITIR ACCESO PÚBLICO A LAS FOTOS
                 ).permitAll()
-                
                 // ✅ APIS DE TU APP - PERMITIDO TODO
                 .requestMatchers("/api/doctors/**").permitAll()
-                .requestMatchers("/api/appointments/**").permitAll()  // ← FIX PRINCIPAL
-                
+                .requestMatchers(HttpMethod.PATCH, "/api/appointments/**").authenticated()
+                .requestMatchers("/api/appointments/**").permitAll()  // ← GET, POST, etc. públicos, pero PATCH requiere autenticación
                 // ✅ ROLES ESPECÍFICOS (después de permitAll)
                 .requestMatchers(HttpMethod.PUT, "/api/appointments/**").hasAnyRole("DOCTOR", "ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/appointments/*/files").hasAnyRole("DOCTOR", "ADMIN")
-                
                 // ✅ AUTENTICADO
                 .requestMatchers("/api/users/**", "/api/patients/**").authenticated()
-                
                 // ✅ CUALQUIER OTRA COSA
                 .anyRequest().authenticated()
             )
