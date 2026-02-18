@@ -48,6 +48,8 @@ public class AppointmentController {
             if (changed) {
                 appointmentService.saveAppointment(apt);
                 auditLogService.log(userEmail, "UPDATE_APPOINTMENT", "Modificó cita " + id);
+                // Log de edición de cita
+                auditLogService.log(userEmail, "UPDATE_APPOINTMENT_DETAIL", "Editó detalles de la cita " + id);
             }
             return ResponseEntity.ok("Cita actualizada correctamente");
         } catch (Exception e) {
@@ -180,6 +182,8 @@ public class AppointmentController {
             // Log creación de cita
             String userEmail = authentication != null ? authentication.getName() : "anonymous";
             auditLogService.log(userEmail, "CREATE_APPOINTMENT", "Creó cita para paciente " + patientId + " con doctor " + doctorId);
+            // Log de creación de cita (detalle)
+            auditLogService.log(userEmail, "CREATE_APPOINTMENT_DETAIL", "Cita creada con especialidad: " + especialidad + ", fecha: " + dateTime);
 
             // Convertir a DTO para exponer qrCodeUrl y evitar exponer entidades
             com.medapp.citasmedicas.dto.AppointmentDTO.DoctorDTO doctorDto = null;

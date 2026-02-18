@@ -1,10 +1,10 @@
 package com.medapp.citasmedicas.controller;
 
+import com.medapp.citasmedicas.service.AuditLogService;
 import com.medapp.citasmedicas.model.Doctor;
-import com.medapp.citasmedicas.model.User; // ← IMPORT NUEVO
+import com.medapp.citasmedicas.model.User;
 import com.medapp.citasmedicas.service.DoctorService;
 import com.medapp.citasmedicas.service.AppointmentService;
-// ...existing code...
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,13 +14,15 @@ import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.context.SecurityContextHolder;
-
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/doctors")
 @CrossOrigin(origins = "*")
 public class DoctorController {
+
+    @Autowired
+    private AuditLogService auditLogService;
     private static final Logger log = LoggerFactory.getLogger(DoctorController.class);
 
     @Autowired
@@ -75,6 +77,8 @@ public class DoctorController {
         log.info("[DoctorController] Petición recibida para crear doctor: {}", doctor.getNombre());
         try {
             Doctor created = doctorService.createDoctor(doctor);
+            // Log de creación de doctor
+            auditLogService.log(doctor.getUser() != null ? doctor.getUser().getEmail() : "anonymous", "CREATE_DOCTOR", "Creó doctor: " + doctor.getNombre());
             return ResponseEntity.ok(created);
         } catch (IllegalArgumentException e) {
             log.error("[DoctorController] Error al crear doctor: {}", e.getMessage());

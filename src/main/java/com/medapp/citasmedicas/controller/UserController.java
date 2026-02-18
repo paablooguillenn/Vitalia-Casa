@@ -235,6 +235,9 @@ public class UserController {
             } catch (Exception ignored) {}
         }
         userRepo.save(user);
+        // Log de edición de usuario
+        String actor = authentication != null ? authentication.getName() : "anonymous";
+        auditLogService.log(actor, "UPDATE_USER", "Editó usuario: " + user.getEmail());
         return ResponseEntity.ok(new UserDTO(user));
     }
 

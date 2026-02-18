@@ -50,6 +50,24 @@ public class AdminStatisticsController {
             appointmentsPerMonth.add(Map.of("month", monthName, "count", count));
         }
         stats.put("appointmentsPerMonth", appointmentsPerMonth);
+
+        // Citas por especialidad
+        Map<String, Long> citasPorEspecialidad = allAppointments.stream()
+            .filter(a -> a.getDoctor() != null && a.getDoctor().getEspecialidad() != null)
+            .collect(Collectors.groupingBy(
+                a -> a.getDoctor().getEspecialidad(),
+                Collectors.counting()
+            ));
+        List<Map<String, Object>> citasPorEspecialidadList = citasPorEspecialidad.entrySet().stream()
+            .map(e -> {
+                Map<String, Object> m = new HashMap<>();
+                m.put("especialidad", e.getKey());
+                m.put("count", e.getValue());
+                return m;
+            })
+            .collect(Collectors.toList());
+        stats.put("citasPorEspecialidad", citasPorEspecialidadList);
+
         return ResponseEntity.ok(stats);
     }
 }

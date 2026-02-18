@@ -1,4 +1,6 @@
+
 "use client"
+import React from "react";
 
 // import { statsData } from "@/lib/mock-data"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -50,7 +52,10 @@ function StatisticsPage() {
   const appointmentsPerMonth = stats.appointmentsPerMonth ?? []
   const revenuePerMonth = appointmentsPerMonth.map((m: any) => ({ month: m.month, revenue: m.count * 100 }))
   // Si el backend provee citas por especialidad, usarlo; si no, mostrar vacío
-  const appointmentsBySpecialty = stats.appointmentsBySpecialty ?? []
+  // El backend devuelve "citasPorEspecialidad", pero el frontend espera "appointmentsBySpecialty"
+  const appointmentsBySpecialty = ((stats.citasPorEspecialidad || stats.appointmentsBySpecialty) ?? []).map(
+    (item: any) => ({ ...item, count: Number(item.count) })
+  )
 
   return (
     <div className="flex flex-col gap-6">
@@ -99,11 +104,11 @@ function StatisticsPage() {
                   <Pie
                     data={appointmentsBySpecialty}
                     dataKey="count"
-                    nameKey="specialty"
+                    nameKey="especialidad"
                     cx="50%"
                     cy="50%"
                     outerRadius={90}
-                    label={({ specialty, percent }) => `${specialty} ${(percent * 100).toFixed(0)}%`}
+                    label={({ especialidad, percent }) => `${especialidad} ${(percent * 100).toFixed(0)}%`}
                     labelLine={false}
                     fontSize={10}
                   >

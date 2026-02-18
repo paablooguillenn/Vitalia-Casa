@@ -1,4 +1,6 @@
+
 "use client"
+import React from "react";
 
 import { useMemo, useState } from "react"
 // import { auditLogs } from "@/lib/mock-data"
@@ -17,6 +19,13 @@ const actionLabels: Record<string, { label: string; className: string }> = {
   COMPLETE_APPOINTMENT: { label: "Completar Cita", className: "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-800" },
   CREATE_APPOINTMENT: { label: "Crear Cita", className: "bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-900/40 dark:text-sky-300 dark:border-sky-800" },
   UPDATE_AVAILABILITY: { label: "Disponibilidad", className: "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/40 dark:text-purple-300 dark:border-purple-800" },
+  DELETE_USER: { label: "Eliminar Usuario", className: "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-800" },
+  DELETE_DOCTOR: { label: "Eliminar Doctor", className: "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-800" },
+  DELETE_APPOINTMENT: { label: "Eliminar Cita", className: "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-800" },
+  REGISTER: { label: "Registro", className: "bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-900/40 dark:text-sky-300 dark:border-sky-800" },
+  UPDATE_APPOINTMENT_DETAIL: { label: "Editar Detalles Cita", className: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-800" },
+  CREATE_DOCTOR: { label: "Crear Doctor", className: "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-800" },
+  CREATE_APPOINTMENT_DETAIL: { label: "Crear Detalles Cita", className: "bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-900/40 dark:text-sky-300 dark:border-sky-800" },
 }
 
 
@@ -28,7 +37,10 @@ function LogsPage() {
   // Fetch logs from API
   React.useEffect(() => {
     setLoading(true)
-    fetch("/api/admin/logs")
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    fetch("/api/admin/logs", {
+      headers: token ? { "Authorization": `Bearer ${token}` } : {}
+    })
       .then((res) => res.json())
       .then((data) => {
         setLogs(Array.isArray(data) ? data : [])

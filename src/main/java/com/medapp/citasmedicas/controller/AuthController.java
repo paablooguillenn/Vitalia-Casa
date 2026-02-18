@@ -1,5 +1,7 @@
+
 package com.medapp.citasmedicas.controller;
 
+import com.medapp.citasmedicas.service.AuditLogService;
 import com.medapp.citasmedicas.model.User;
 import com.medapp.citasmedicas.repository.UserRepository;
 import com.medapp.citasmedicas.repository.DoctorRepository;
@@ -30,6 +32,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/auth")
 @Tag(name = "Authentication", description = "Endpoints de autenticación: login y registro")
 public class AuthController {
+
+        @Autowired
+        private AuditLogService auditLogService;
     private static final Logger log = LoggerFactory.getLogger(AuthController.class);
     
     @Autowired
@@ -125,7 +130,8 @@ public class AuthController {
             user.setTelefono(request.getTelefono());
         }
         userRepository.save(user);
-        
+        // Log de registro
+        auditLogService.log(user.getEmail(), "REGISTER", "Registro de nuevo usuario");
         return ResponseEntity.status(HttpStatus.CREATED)
             .body("Usuario creado exitosamente. Usa /login para obtener JWT");
     }
