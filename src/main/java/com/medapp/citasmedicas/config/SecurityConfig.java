@@ -57,6 +57,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/doctors/**").permitAll()
                 .requestMatchers(HttpMethod.PATCH, "/api/appointments/**").authenticated()
                 .requestMatchers("/api/appointments/**").permitAll()  // ← GET, POST, etc. públicos, pero PATCH requiere autenticación
+                // ✅ ENDPOINTS DE ADMIN: SOLO AUTENTICADO
+                .requestMatchers("/api/admin/**").authenticated()
                 // ✅ ROLES ESPECÍFICOS (después de permitAll)
                 .requestMatchers(HttpMethod.PUT, "/api/appointments/**").hasAnyRole("DOCTOR", "ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/appointments/*/files").hasAnyRole("DOCTOR", "ADMIN")

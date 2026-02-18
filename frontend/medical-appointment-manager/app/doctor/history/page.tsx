@@ -32,7 +32,7 @@ export default function DoctorHistoryPage() {
         if (!editApt) return;
         setSaving(true);
         try {
-          const res = await fetch(`http://192.168.68.58:8080/api/appointments/${editApt.id}`, {
+          const res = await fetch(`/api/appointments/${editApt.id}`, {
             method: 'PATCH',
             headers: {
               'Content-Type': 'application/json',
@@ -70,7 +70,7 @@ export default function DoctorHistoryPage() {
   const { user } = useAuth();
   useEffect(() => {
     if (!user) return;
-    fetch(`http://192.168.68.58:8080/api/users/${user.id}/appointments`, {
+    fetch(`/api/users/${user.id}/appointments`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }

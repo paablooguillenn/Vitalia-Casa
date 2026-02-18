@@ -9,6 +9,8 @@ export interface User {
   role: UserRole
   phone?: string
   avatar?: string
+  profilePictureUrl?: string // Añadido para compatibilidad backend
+  nombre?: string // Añadido para compatibilidad backend
 }
 
 export interface Doctor {

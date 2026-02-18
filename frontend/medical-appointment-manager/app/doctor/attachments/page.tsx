@@ -18,39 +18,49 @@ export default function DoctorAttachmentsPage() {
   const [files, setFiles] = useState<FileAttachment[]>(fileAttachments)
   const [dragOver, setDragOver] = useState(false)
 
-  const handleDrop = (e: React.DragEvent) => {
+  const appointmentId = "1"; // TODO: obtener dinámicamente
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault()
     setDragOver(false)
     const dropped = e.dataTransfer.files
     if (dropped.length > 0) {
-      const newFile: FileAttachment = {
-        id: `f-${Date.now()}`,
-        name: dropped[0].name,
-        type: dropped[0].type,
-        size: dropped[0].size,
-        url: "#",
-        appointmentId: "a1",
-        uploadedAt: new Date().toISOString(),
+      const formData = new FormData()
+      formData.append("file", dropped[0])
+      formData.append("type", dropped[0].type || "document")
+      try {
+        const res = await fetch(`/api/appointments/${appointmentId}/files`, {
+          method: "POST",
+          body: formData
+        })
+        if (!res.ok) throw new Error("Error al subir archivo")
+        const saved: FileAttachment = await res.json()
+        setFiles((prev) => [saved, ...prev])
+        toast.success(`Archivo "${dropped[0].name}" subido correctamente`)
+      } catch (err) {
+        toast.error("Error al subir archivo")
       }
-      setFiles((prev) => [newFile, ...prev])
-      toast.success(`Archivo "${dropped[0].name}" subido correctamente`)
     }
   }
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files
     if (selected && selected.length > 0) {
-      const newFile: FileAttachment = {
-        id: `f-${Date.now()}`,
-        name: selected[0].name,
-        type: selected[0].type,
-        size: selected[0].size,
-        url: "#",
-        appointmentId: "a1",
-        uploadedAt: new Date().toISOString(),
-      }
-      setFiles((prev) => [newFile, ...prev])
-      toast.success(`Archivo "${selected[0].name}" subido correctamente`)
+      const formData = new FormData()
+      formData.append("file", selected[0])
+      formData.append("type", selected[0].type || "document")
+      fetch(`/api/appointments/${appointmentId}/files`, {
+        method: "POST",
+        body: formData
+      })
+        .then(async (res) => {
+          if (!res.ok) throw new Error("Error al subir archivo")
+          const saved: FileAttachment = await res.json()
+          setFiles((prev) => [saved, ...prev])
+          toast.success(`Archivo "${selected[0].name}" subido correctamente`)
+        })
+        .catch(() => {
+          toast.error("Error al subir archivo")
+        })
     }
   }
 

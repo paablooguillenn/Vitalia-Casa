@@ -44,7 +44,7 @@ export default function DoctorAgendaPage() {
       console.log("DoctorAgenda: doctorId desde user.doctor.id", user.doctor.id);
     } else {
       // Buscar doctorId por userId
-      fetch(`http://192.168.68.58:8080/api/doctors?userId=${user.id}`, {
+      fetch(`/api/doctors?userId=${user.id}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -71,7 +71,7 @@ export default function DoctorAgendaPage() {
     console.log('DoctorAgenda: doctorId usado para fetch', doctorId);
     const start = weekDates[0].toISOString().split("T")[0] + "T00:00:00";
     const end = weekDates[6].toISOString().split("T")[0] + "T23:59:59";
-    fetch(`http://localhost:8080/api/appointments/doctor/${doctorId}/range?start=${start}&end=${end}`, {
+    fetch(`/api/appointments/doctor/${doctorId}/range?start=${start}&end=${end}`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }

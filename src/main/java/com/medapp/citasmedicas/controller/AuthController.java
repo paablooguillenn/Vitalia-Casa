@@ -19,6 +19,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,6 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/auth")
 @Tag(name = "Authentication", description = "Endpoints de autenticación: login y registro")
 public class AuthController {
+    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
     
     @Autowired
     private AuthenticationManager authenticationManager;
@@ -68,6 +71,7 @@ public class AuthController {
             String rol = null;
             String nombre = null;
             if (user != null) {
+                log.info("[DEBUG] user.getRole() para {}: {}", user.getEmail(), user.getRole());
                 if (doctorRepository.findByUser_Id(user.getId()) != null) {
                     rol = "doctor";
                 } else if (user.getRole() != null) {

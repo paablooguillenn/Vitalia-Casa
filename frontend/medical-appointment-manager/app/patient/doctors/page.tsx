@@ -28,7 +28,7 @@ export default function PatientDoctorsPage() {
     }
 
     setLoading(true)
-    fetch("http://192.168.68.58:8080/api/doctors", {
+    fetch("/api/doctors", {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -54,7 +54,7 @@ export default function PatientDoctorsPage() {
     }
 
     setLoadingSpecialties(true)
-    fetch("http://192.168.68.58:8080/api/doctors/specialties", {
+    fetch("/api/doctors/specialties", {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -143,7 +143,7 @@ export default function PatientDoctorsPage() {
                   <Avatar className="h-16 w-16 flex-shrink-0">
                     {doc.profilePictureUrl ? (
                       <img
-                        src={`http://192.168.68.58:8080/${doc.profilePictureUrl.replace(/\\/g, '/')}`}
+                        src={`/api/${doc.profilePictureUrl.replace(/\\/g, '/')}`}
                         alt={doc.nombre}
                         className="object-cover w-full h-full rounded-full"
                       />

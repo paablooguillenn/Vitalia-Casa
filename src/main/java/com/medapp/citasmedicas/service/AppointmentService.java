@@ -19,6 +19,40 @@ import java.util.List;
 
 @Service
 public class AppointmentService {
+    // Recordatorio automático 24h antes de la cita
+    @org.springframework.scheduling.annotation.Scheduled(cron = "0 0 * * * *") // Cada hora
+    public void sendAppointmentReminders() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime reminderTime = now.plusHours(24);
+        List<Appointment> upcoming = appointmentRepo.findAll();
+        for (Appointment apt : upcoming) {
+            if (apt.getDateTime() != null &&
+                apt.getStatus() != null &&
+                apt.getStatus().equalsIgnoreCase("CONFIRMED") &&
+                apt.getDateTime().isAfter(now) &&
+                apt.getDateTime().isBefore(reminderTime)) {
+                String notes = apt.getNotes() != null ? apt.getNotes() : "Sin notas";
+                // Notificar paciente
+                if (apt.getPatient() != null) {
+                    notificationService.createNotification(
+                        "Recordatorio de cita",
+                        String.format("Tienes una cita con el Dr. %s el %s.\nNotas: %s", apt.getDoctor().getNombre(), apt.getDateTime(), notes),
+                        "REMINDER",
+                        apt.getPatient()
+                    );
+                }
+                // Notificar doctor
+                if (apt.getDoctor() != null && apt.getDoctor().getUser() != null) {
+                    notificationService.createNotification(
+                        "Recordatorio de cita",
+                        String.format("Tienes una cita con %s el %s.\nNotas: %s", apt.getPatient().getNombre(), apt.getDateTime(), notes),
+                        "REMINDER",
+                        apt.getDoctor().getUser()
+                    );
+                }
+            }
+        }
+    }
     private static final Logger log = LoggerFactory.getLogger(AppointmentService.class);
     
     @Autowired
@@ -29,6 +63,9 @@ public class AppointmentService {
 
     @Autowired
     private UserRepository userRepo;
+
+    @Autowired
+    private NotificationService notificationService;
 
     // Obtener cita por ID (null si no existe)
     public Appointment getAppointmentById(Long id) {
@@ -57,6 +94,24 @@ public class AppointmentService {
         if ("CANCELLED".equalsIgnoreCase(apt.getStatus())) return "La cita ya está cancelada";
         apt.setStatus("CANCELLED");
         appointmentRepo.save(apt);
+        // Notificar a paciente y doctor
+        String notes = apt.getNotes() != null ? apt.getNotes() : "Sin notas";
+        if (apt.getPatient() != null) {
+            notificationService.createNotification(
+                "Cita cancelada",
+                String.format("Tu cita con el Dr. %s el %s ha sido cancelada.\nNotas: %s", apt.getDoctor().getNombre(), apt.getDateTime(), notes),
+                "CANCELLATION",
+                apt.getPatient()
+            );
+        }
+        if (apt.getDoctor() != null && apt.getDoctor().getUser() != null) {
+            notificationService.createNotification(
+                "Cita cancelada",
+                String.format("La cita con %s el %s ha sido cancelada.\nNotas: %s", apt.getPatient().getNombre(), apt.getDateTime(), notes),
+                "CANCELLATION",
+                apt.getDoctor().getUser()
+            );
+        }
         return "OK";
     }
 
@@ -158,6 +213,21 @@ public class AppointmentService {
 
             Appointment saved = appointmentRepo.save(appointment);
             log.info("✅ Cita CREADA ID: {} QR: {}", saved.getId(), saved.getQrCodeUrl());
+            // Notificar a paciente y doctor
+            notificationService.createNotification(
+                "Nueva cita creada",
+                String.format("Tu cita con el Dr. %s está agendada para %s.\nNotas: %s", doctor.getNombre(), dateTime, notes != null ? notes : "Sin notas"),
+                "NEW_APPOINTMENT",
+                patient
+            );
+            if (doctor.getUser() != null) {
+                notificationService.createNotification(
+                    "Nueva cita asignada",
+                    String.format("Tienes una nueva cita con %s el %s.\nNotas: %s", patient.getNombre(), dateTime, notes != null ? notes : "Sin notas"),
+                    "NEW_APPOINTMENT",
+                    doctor.getUser()
+                );
+            }
             return saved;
         } catch (IllegalArgumentException e) {
             log.error("❌ createAppointment VALIDATION: {}", e.getMessage());
@@ -221,7 +291,46 @@ public class AppointmentService {
                         if (appointmentDetails.getStatus() != null) {
                             appointment.setStatus(appointmentDetails.getStatus());
                         }
-                        return ResponseEntity.ok(appointmentRepo.save(appointment));
+                        Appointment updated = appointmentRepo.save(appointment);
+                        String notes = appointment.getNotes() != null ? appointment.getNotes() : "Sin notas";
+                        // Notificar si cambia el estado o la fecha
+                        if (appointmentDetails.getStatus() != null) {
+                            if (appointment.getPatient() != null) {
+                                notificationService.createNotification(
+                                    "Estado de cita actualizado",
+                                    String.format("El estado de tu cita con el Dr. %s es ahora: %s.\nNotas: %s", appointment.getDoctor().getNombre(), appointment.getStatus(), notes),
+                                    "UPDATE",
+                                    appointment.getPatient()
+                                );
+                            }
+                            if (appointment.getDoctor() != null && appointment.getDoctor().getUser() != null) {
+                                notificationService.createNotification(
+                                    "Estado de cita actualizado",
+                                    String.format("El estado de la cita con %s es ahora: %s.\nNotas: %s", appointment.getPatient().getNombre(), appointment.getStatus(), notes),
+                                    "UPDATE",
+                                    appointment.getDoctor().getUser()
+                                );
+                            }
+                        }
+                        if (appointmentDetails.getDateTime() != null) {
+                            if (appointment.getPatient() != null) {
+                                notificationService.createNotification(
+                                    "Cita reprogramada",
+                                    String.format("Tu cita con el Dr. %s ha sido reprogramada para %s.\nNotas: %s", appointment.getDoctor().getNombre(), appointment.getDateTime(), notes),
+                                    "RESCHEDULE",
+                                    appointment.getPatient()
+                                );
+                            }
+                            if (appointment.getDoctor() != null && appointment.getDoctor().getUser() != null) {
+                                notificationService.createNotification(
+                                    "Cita reprogramada",
+                                    String.format("La cita con %s ha sido reprogramada para %s.\nNotas: %s", appointment.getPatient().getNombre(), appointment.getDateTime(), notes),
+                                    "RESCHEDULE",
+                                    appointment.getDoctor().getUser()
+                                );
+                            }
+                        }
+                        return ResponseEntity.ok(updated);
                     })
                     .orElse(ResponseEntity.notFound().build());
         } catch (Exception e) {
@@ -234,7 +343,25 @@ public class AppointmentService {
         try {
             return appointmentRepo.findById(id)
                     .map(appointment -> {
+                        String notes = appointment.getNotes() != null ? appointment.getNotes() : "Sin notas";
                         appointmentRepo.delete(appointment);
+                        // Notificar a paciente y doctor
+                        if (appointment.getPatient() != null) {
+                            notificationService.createNotification(
+                                "Cita eliminada",
+                                String.format("Tu cita con el Dr. %s el %s ha sido eliminada.\nNotas: %s", appointment.getDoctor().getNombre(), appointment.getDateTime(), notes),
+                                "DELETE",
+                                appointment.getPatient()
+                            );
+                        }
+                        if (appointment.getDoctor() != null && appointment.getDoctor().getUser() != null) {
+                            notificationService.createNotification(
+                                "Cita eliminada",
+                                String.format("La cita con %s el %s ha sido eliminada.\nNotas: %s", appointment.getPatient().getNombre(), appointment.getDateTime(), notes),
+                                "DELETE",
+                                appointment.getDoctor().getUser()
+                            );
+                        }
                         return ResponseEntity.ok().build();
                     })
                     .orElse(ResponseEntity.notFound().build());
@@ -243,4 +370,4 @@ public class AppointmentService {
             return ResponseEntity.internalServerError().build();
         }
     } 
-} 
+}

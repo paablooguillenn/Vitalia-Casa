@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">vITALIA</string>
+    <string name="title_activity_main">vITALIA</string>
+    <string name="package_name">com.vitalia</string>
+    <string name="custom_url_scheme">com.vitalia</string>
+</resources>

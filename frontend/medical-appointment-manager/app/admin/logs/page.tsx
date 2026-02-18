@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { auditLogs } from "@/lib/mock-data"
+// import { auditLogs } from "@/lib/mock-data"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -19,19 +19,34 @@ const actionLabels: Record<string, { label: string; className: string }> = {
   UPDATE_AVAILABILITY: { label: "Disponibilidad", className: "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/40 dark:text-purple-300 dark:border-purple-800" },
 }
 
-export default function AdminLogsPage() {
+
+function LogsPage() {
   const [query, setQuery] = useState("")
+  const [logs, setLogs] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // Fetch logs from API
+  React.useEffect(() => {
+    setLoading(true)
+    fetch("/api/admin/logs")
+      .then((res) => res.json())
+      .then((data) => {
+        setLogs(Array.isArray(data) ? data : [])
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, [])
 
   const filtered = useMemo(() => {
-    if (!query.trim()) return auditLogs
+    if (!query.trim()) return logs
     const q = query.toLowerCase()
-    return auditLogs.filter(
+    return logs.filter(
       (l) =>
-        l.userName.toLowerCase().includes(q) ||
-        l.action.toLowerCase().includes(q) ||
-        l.details.toLowerCase().includes(q)
+        (l.userName || "").toLowerCase().includes(q) ||
+        (l.action || "").toLowerCase().includes(q) ||
+        (l.details || "").toLowerCase().includes(q)
     )
-  }, [query])
+  }, [logs, query])
 
   return (
     <div className="flex flex-col gap-6">
@@ -62,7 +77,11 @@ export default function AdminLogsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.length === 0 ? (
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">Cargando...</TableCell>
+                </TableRow>
+              ) : filtered.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">No se encontraron registros</TableCell>
                 </TableRow>
@@ -92,3 +111,5 @@ export default function AdminLogsPage() {
     </div>
   )
 }
+
+export default LogsPage;

@@ -23,7 +23,7 @@ export default function PatientHistoryPage() {
 
   useEffect(() => {
     if (!user) return;
-    fetch(`http://192.168.68.58:8080/api/appointments/patient/${user.id}`, {
+    fetch(`/api/appointments/patient/${user.id}`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }

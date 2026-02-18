@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import { users as initialUsers } from "@/lib/mock-data"
+import React, { useState, useMemo } from "react"
+// import { users as initialUsers } from "@/lib/mock-data"
 import type { User, UserRole } from "@/lib/types"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -35,9 +35,10 @@ const roleBadgeStyles: Record<UserRole, string> = {
   admin: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-800",
 }
 
-export default function AdminUsersPage() {
-  const [userList, setUserList] = useState<User[]>(initialUsers)
+function UsersPage() {
+  const [userList, setUserList] = useState<User[]>([])
   const [query, setQuery] = useState("")
+  const [loading, setLoading] = useState(true)
   const [roleFilter, setRoleFilter] = useState("all")
   const [editUser, setEditUser] = useState<User | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -48,9 +49,33 @@ export default function AdminUsersPage() {
   const filtered = useMemo(() => {
     let list = userList
     if (roleFilter !== "all") list = list.filter((u) => u.role === roleFilter)
-    if (query.trim()) list = list.filter((u) => u.name.toLowerCase().includes(query.toLowerCase()) || u.email.toLowerCase().includes(query.toLowerCase()))
+    if (query.trim()) list = list.filter((u) => (u.name?.toLowerCase().includes(query.toLowerCase()) || u.email?.toLowerCase().includes(query.toLowerCase())))
     return list
   }, [userList, query, roleFilter])
+
+  React.useEffect(() => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    setLoading(true);
+    fetch("/api/users", {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("No autorizado");
+        return res.json();
+      })
+      .then((data) => {
+        // Adaptar los datos del backend al modelo del frontend
+        const users = data.map((u: any) => ({
+          id: u.id,
+          name: u.nombre || u.name || "",
+          email: u.email,
+          role: u.role,
+        }))
+        setUserList(users)
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, [])
 
   const openCreate = () => {
     setEditUser(null)
@@ -68,26 +93,100 @@ export default function AdminUsersPage() {
     setDialogOpen(true)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
     if (editUser) {
-      setUserList((prev) => prev.map((u) => (u.id === editUser.id ? { ...u, name: formName, email: formEmail, role: formRole } : u)))
-      toast.success("Usuario actualizado")
-    } else {
-      const newUser: User = {
-        id: `u-${Date.now()}`,
-        name: formName,
-        email: formEmail,
-        role: formRole,
+      // Actualizar usuario en backend
+      try {
+        const res = await fetch(`/api/users/${editUser.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({
+            nombre: formName,
+            email: formEmail,
+            role: formRole
+          })
+        });
+        if (!res.ok) throw new Error("Error al actualizar usuario");
+        toast.success("Usuario actualizado");
+        // Refrescar lista
+        setLoading(true);
+        const usersRes = await fetch("/api/users", { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+        const data = await usersRes.json();
+        const users = data.map((u: any) => ({
+          id: u.id,
+          name: u.nombre || u.name || "",
+          email: u.email,
+          role: u.role,
+        }));
+        setUserList(users);
+        setLoading(false);
+      } catch (e) {
+        toast.error("No se pudo actualizar el usuario");
       }
-      setUserList((prev) => [...prev, newUser])
-      toast.success("Usuario creado")
+    } else {
+      // Crear usuario en backend
+      try {
+        const res = await fetch("/api/users", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({
+            nombre: formName,
+            email: formEmail,
+            role: formRole
+          })
+        });
+        if (!res.ok) throw new Error("Error al crear usuario");
+        toast.success("Usuario creado");
+        // Refrescar lista
+        setLoading(true);
+        const usersRes = await fetch("/api/users", { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+        const data = await usersRes.json();
+        const users = data.map((u: any) => ({
+          id: u.id,
+          name: u.nombre || u.name || "",
+          email: u.email,
+          role: u.role,
+        }));
+        setUserList(users);
+        setLoading(false);
+      } catch (e) {
+        toast.error("No se pudo crear el usuario");
+      }
     }
     setDialogOpen(false)
   }
 
-  const handleDelete = (id: string) => {
-    setUserList((prev) => prev.filter((u) => u.id !== id))
-    toast.info("Usuario eliminado")
+  const handleDelete = async (id: string) => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    try {
+      const res = await fetch(`/api/users/${id}`, {
+        method: "DELETE",
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      if (!res.ok) throw new Error("Error al eliminar usuario");
+      toast.success("Usuario eliminado");
+      // Refrescar lista
+      setLoading(true);
+      const usersRes = await fetch("/api/users", { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      const data = await usersRes.json();
+      const users = data.map((u: any) => ({
+        id: u.id,
+        name: u.nombre || u.name || "",
+        email: u.email,
+        role: u.role,
+      }));
+      setUserList(users);
+      setLoading(false);
+    } catch (e) {
+      toast.error("No se pudo eliminar el usuario");
+    }
   }
 
   return (
@@ -174,7 +273,11 @@ export default function AdminUsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.length === 0 ? (
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">Cargando...</TableCell>
+                </TableRow>
+              ) : filtered.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">No se encontraron usuarios</TableCell>
                 </TableRow>
@@ -185,7 +288,7 @@ export default function AdminUsersPage() {
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
                           <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                            {u.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                            {u.name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
                           </AvatarFallback>
                         </Avatar>
                         <span className="text-sm font-medium text-foreground">{u.name}</span>
@@ -213,7 +316,10 @@ export default function AdminUsersPage() {
             </TableBody>
           </Table>
         </CardContent>
+
       </Card>
     </div>
   )
 }
+
+export default UsersPage;

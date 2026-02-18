@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.medapp.citasmedicas.service.AuditLogService;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,6 +18,8 @@ import java.util.Map;
 @RequestMapping("/api/appointments")
 @CrossOrigin(origins = "*")
 public class AppointmentController {
+    @Autowired
+    private AuditLogService auditLogService;
     // PATCH /api/appointments/{id} para editar fecha/hora/estado
     @PatchMapping("/{id}")
     public ResponseEntity<?> updateAppointment(@PathVariable Long id, @RequestBody Map<String, Object> updates, org.springframework.security.core.Authentication authentication) {
@@ -25,20 +28,27 @@ public class AppointmentController {
             if (apt == null) {
                 return ResponseEntity.status(404).body("Cita no encontrada");
             }
-            // Permitir solo si el usuario es doctor o admin (opcional: validar más)
             String userEmail = authentication.getName();
-            // Actualizar campos si están presentes
+            boolean changed = false;
             if (updates.containsKey("date") && updates.containsKey("time")) {
                 String date = updates.get("date").toString();
                 String time = updates.get("time").toString();
-                // Unir date y time a LocalDateTime
                 java.time.LocalDateTime dateTime = java.time.LocalDateTime.parse(date + "T" + time);
                 apt.setDateTime(dateTime);
+                changed = true;
             }
             if (updates.containsKey("status")) {
-                apt.setStatus(updates.get("status").toString());
+                String oldStatus = apt.getStatus();
+                String newStatus = updates.get("status").toString();
+                apt.setStatus(newStatus);
+                changed = true;
+                // Log cambio de estado
+                auditLogService.log(userEmail, "UPDATE_APPOINTMENT_STATUS", "Cambio de estado de cita " + id + ": " + oldStatus + " → " + newStatus);
             }
-            appointmentService.saveAppointment(apt);
+            if (changed) {
+                appointmentService.saveAppointment(apt);
+                auditLogService.log(userEmail, "UPDATE_APPOINTMENT", "Modificó cita " + id);
+            }
             return ResponseEntity.ok("Cita actualizada correctamente");
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Error al actualizar la cita: " + e.getMessage());
@@ -51,6 +61,7 @@ public class AppointmentController {
             String userEmail = authentication.getName();
             String debugInfo = appointmentService.cancelAppointmentDebug(id, userEmail);
             if ("OK".equals(debugInfo)) {
+                auditLogService.log(userEmail, "CANCEL_APPOINTMENT", "Canceló cita " + id);
                 return ResponseEntity.ok().body("Cita cancelada correctamente");
             } else {
                 return ResponseEntity.status(403).body("No tienes permiso para cancelar esta cita o ya está cancelada. Debug: " + debugInfo);
@@ -142,7 +153,7 @@ public class AppointmentController {
     private AppointmentService appointmentService;
 
     @PostMapping
-    public ResponseEntity<?> createAppointment(@RequestBody Map<String, Object> request) { // ← Map en lugar de DTO
+    public ResponseEntity<?> createAppointment(@RequestBody Map<String, Object> request, org.springframework.security.core.Authentication authentication) { // ← Map en lugar de DTO
         try {
             log.info("=== CREATE APPOINTMENT REQUEST: {}", request);
 
@@ -166,6 +177,9 @@ public class AppointmentController {
             // ✅ LLAMAR SERVICE CON TRY/CATCH
             Appointment appointment = appointmentService.createAppointment(doctorId, patientId,
                 dateTime, especialidad, notes);
+            // Log creación de cita
+            String userEmail = authentication != null ? authentication.getName() : "anonymous";
+            auditLogService.log(userEmail, "CREATE_APPOINTMENT", "Creó cita para paciente " + patientId + " con doctor " + doctorId);
 
             // Convertir a DTO para exponer qrCodeUrl y evitar exponer entidades
             com.medapp.citasmedicas.dto.AppointmentDTO.DoctorDTO doctorDto = null;

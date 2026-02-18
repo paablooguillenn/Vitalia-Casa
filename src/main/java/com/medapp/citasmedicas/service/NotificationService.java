@@ -12,10 +12,17 @@ import java.util.List;
 public class NotificationService {
     @Autowired
     private NotificationRepository notificationRepository;
+    @Autowired
+    private EmailService emailService;
 
     public Notification createNotification(String title, String message, String type, User user) {
         Notification notification = new Notification(title, message, type, user);
-        return notificationRepository.save(notification);
+        Notification saved = notificationRepository.save(notification);
+        // Enviar email al usuario
+        if (user.getEmail() != null && !user.getEmail().isEmpty()) {
+            emailService.sendSimpleEmail(user.getEmail(), title, message);
+        }
+        return saved;
     }
 
     public List<Notification> getUserNotifications(User user) {

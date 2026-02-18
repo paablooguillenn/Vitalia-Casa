@@ -19,7 +19,7 @@ export default function DoctorDashboard() {
   useEffect(() => {
     if (!user) return;
     setLoading(true);
-    fetch(`http://192.168.68.58:8080/api/users/${user.id}/appointments`, {
+    fetch(`/api/users/${user.id}/appointments`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }

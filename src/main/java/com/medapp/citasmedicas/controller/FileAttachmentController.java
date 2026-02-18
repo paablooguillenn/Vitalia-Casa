@@ -5,6 +5,7 @@ import com.medapp.citasmedicas.repository.FileAttachmentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.medapp.citasmedicas.service.AuditLogService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import java.util.List;
@@ -14,6 +15,8 @@ import java.util.List;
 @CrossOrigin(origins = "*")
 @Tag(name = "file-attachment-controller", description = "Gestión de archivos adjuntos a citas médicas")
 public class FileAttachmentController {
+    @Autowired
+    private AuditLogService auditLogService;
 
     @Autowired
     private FileAttachmentRepository fileAttachmentRepo;
@@ -33,9 +36,12 @@ public class FileAttachmentController {
     public ResponseEntity<FileAttachment> uploadFile(
             @PathVariable Long appointmentId,
             @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
-            @RequestParam("type") String type) {
+            @RequestParam("type") String type,
+            org.springframework.security.core.Authentication authentication) {
         try {
             FileAttachment saved = fileAttachmentService.saveFile(appointmentId, file, type);
+            String userEmail = authentication != null ? authentication.getName() : "anonymous";
+            auditLogService.log(userEmail, "UPLOAD_FILE", "Subió archivo a cita " + appointmentId + ": " + file.getOriginalFilename());
             return ResponseEntity.ok(saved);
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();

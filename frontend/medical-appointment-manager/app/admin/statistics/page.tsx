@@ -1,6 +1,6 @@
 "use client"
 
-import { statsData } from "@/lib/mock-data"
+// import { statsData } from "@/lib/mock-data"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   BarChart, Bar,
@@ -17,7 +17,41 @@ const PIE_COLORS = [
   "hsl(12, 76%, 61%)",
 ]
 
-export default function AdminStatisticsPage() {
+
+function StatisticsPage() {
+  const [stats, setStats] = React.useState<any>(null)
+  const [loading, setLoading] = React.useState(true)
+
+  React.useEffect(() => {
+    setLoading(true)
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    fetch("/api/admin/statistics", {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("No autorizado");
+        return res.json();
+      })
+      .then((data) => {
+        setStats(data)
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, [])
+
+  if (loading) {
+    return <div className="p-8 text-center text-muted-foreground">Cargando estadísticas...</div>
+  }
+  if (!stats) {
+    return <div className="p-8 text-center text-destructive">No se pudieron cargar las estadísticas.</div>
+  }
+
+  // Datos reales del backend
+  const appointmentsPerMonth = stats.appointmentsPerMonth ?? []
+  const revenuePerMonth = appointmentsPerMonth.map((m: any) => ({ month: m.month, revenue: m.count * 100 }))
+  // Si el backend provee citas por especialidad, usarlo; si no, mostrar vacío
+  const appointmentsBySpecialty = stats.appointmentsBySpecialty ?? []
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
@@ -34,7 +68,7 @@ export default function AdminStatisticsPage() {
           <CardContent>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={statsData.appointmentsPerMonth}>
+                <BarChart data={appointmentsPerMonth}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                   <XAxis dataKey="month" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
                   <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
@@ -53,7 +87,7 @@ export default function AdminStatisticsPage() {
           </CardContent>
         </Card>
 
-        {/* Pie chart - by specialty */}
+        {/* Pie chart - by specialty (real si existe) */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base text-foreground">Citas por Especialidad</CardTitle>
@@ -63,7 +97,7 @@ export default function AdminStatisticsPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={statsData.appointmentsBySpecialty}
+                    data={appointmentsBySpecialty}
                     dataKey="count"
                     nameKey="specialty"
                     cx="50%"
@@ -73,7 +107,7 @@ export default function AdminStatisticsPage() {
                     labelLine={false}
                     fontSize={10}
                   >
-                    {statsData.appointmentsBySpecialty.map((_, i) => (
+                    {appointmentsBySpecialty.map((_, i) => (
                       <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                     ))}
                   </Pie>
@@ -91,7 +125,7 @@ export default function AdminStatisticsPage() {
           </CardContent>
         </Card>
 
-        {/* Line chart - revenue */}
+        {/* Line chart - revenue (real) */}
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="text-base text-foreground">Ingresos Mensuales (MXN)</CardTitle>
@@ -99,7 +133,7 @@ export default function AdminStatisticsPage() {
           <CardContent>
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={statsData.revenuePerMonth}>
+                <LineChart data={revenuePerMonth}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                   <XAxis dataKey="month" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
                   <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}K`} />
@@ -131,3 +165,5 @@ export default function AdminStatisticsPage() {
     </div>
   )
 }
+
+export default StatisticsPage;

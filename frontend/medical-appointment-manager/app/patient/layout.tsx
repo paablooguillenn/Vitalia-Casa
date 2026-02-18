@@ -3,6 +3,7 @@
 import { ReactNode } from "react"
 import { Header } from "../../components/layout/header"
 import { SidebarNav } from "../../components/layout/sidebar-nav"
+import { BottomNav } from "../../components/layout/bottom-nav"
 
 
 export default function PatientLayout({
@@ -23,6 +24,7 @@ export default function PatientLayout({
           </div>
         </main>
       </div>
+      <BottomNav role="patient" />
     </div>
   )
 }

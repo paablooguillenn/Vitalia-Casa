@@ -43,7 +43,6 @@ const navByRole: Record<UserRole, NavItem[]> = {
     { label: "Historial", href: "/doctor/history", icon: History },
     { label: "Mi Perfil", href: "/doctor/profile", icon: UserCircle },
     { label: "Adjuntos", href: "/doctor/attachments", icon: Paperclip },
-    { label: "Notificaciones", href: "/doctor/notifications", icon: Bell },
   ],
   admin: [
     { label: "Dashboard", href: "/admin", icon: LayoutDashboard },

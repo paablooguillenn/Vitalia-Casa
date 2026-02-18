@@ -22,7 +22,7 @@ export default function PatientProfilePage() {
 
   useEffect(() => {
     if (!user?.id) return;
-    fetch(`http://192.168.68.58:8080/api/users/${user.id}`, {
+    fetch(`/api/users/${user.id}`, {
       headers: {
         "Authorization": `Bearer ${localStorage.getItem('token')}`
       }
@@ -49,7 +49,7 @@ export default function PatientProfilePage() {
     if (!user) return;
     setSaving(true);
     try {
-      const res = await fetch(`http://192.168.68.58:8080/api/users/${user.id}`, {
+      const res = await fetch(`/api/users/${user.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -82,7 +82,7 @@ export default function PatientProfilePage() {
             <div className="relative">
               <Avatar className="h-16 w-16">
                 {profilePictureUrl ? (
-                  <AvatarImage src={`http://192.168.68.58:8080/${profilePictureUrl.replace(/\\/g, '/')}?t=${imageTimestamp}`} alt="Foto de perfil" />
+                      <AvatarImage src={`/api/${profilePictureUrl.replace(/\\/g, '/')}`} alt="Foto de perfil" />
                 ) : null}
                 <AvatarFallback className="bg-primary/10 text-primary text-lg font-semibold">
                   {initials}
@@ -103,7 +103,7 @@ export default function PatientProfilePage() {
                       const formData = new FormData();
                       formData.append("file", e.target.files[0]);
                       try {
-                        const res = await fetch(`http://192.168.68.58:8080/api/users/${user.id}/profile-picture`, {
+                        const res = await fetch(`/api/users/${user.id}/profile-picture`, {
                           method: "POST",
                           headers: {
                             "Authorization": `Bearer ${localStorage.getItem('token')}`
@@ -113,7 +113,7 @@ export default function PatientProfilePage() {
                         if (!res.ok) throw new Error("Error al subir la foto");
                         toast.success("Foto de perfil actualizada");
                         // Refrescar la foto
-                        fetch(`http://192.168.68.58:8080/api/users/${user.id}`, {
+                        fetch(`/api/users/${user.id}`, {
                           headers: { "Authorization": `Bearer ${localStorage.getItem('token')}` }
                         })
                           .then(res => res.json())

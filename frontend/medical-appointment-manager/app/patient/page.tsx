@@ -3,7 +3,6 @@
 
 import { useMemo, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useAuth } from "@/lib/auth-context"
 import { StatusBadge } from "@/components/shared/status-badge"
@@ -46,7 +45,7 @@ export default function PatientDashboard() {
     if (!user?.id) return;
     setLoading(true);
     const token = localStorage.getItem('token');
-    fetch(`http://192.168.68.58:8080/api/appointments/patient/${user.id}`, {
+    fetch(`/api/appointments/patient/${user.id}`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -63,10 +62,6 @@ export default function PatientDashboard() {
         };
         const mapped = data.map((apt: any) => {
           const [date, time] = apt.dateTime ? apt.dateTime.split('T') : [null, null];
-          // Log para debug de status crudo
-          if (typeof window !== 'undefined') {
-            console.log('STATUS CRUDO:', apt.status);
-          }
           return {
             ...apt,
             date: date,
@@ -94,11 +89,7 @@ export default function PatientDashboard() {
 
   const completed = myAppointments.filter((a) => a.status === "COMPLETADA").length;
 
-  // QrReader dinámico para evitar SSR
-  const QrReader = dynamic(
-    () => import("@blackbox-vision/react-qr-reader").then(mod => mod.QrReader),
-    { ssr: false }
-  );
+
 
   return (
     <div className="flex flex-col gap-6">
@@ -108,13 +99,6 @@ export default function PatientDashboard() {
           <div className="bg-white rounded-lg shadow-lg p-4 flex flex-col items-center">
             <h2 className="text-lg font-bold mb-2">Escanear QR de Check-in</h2>
             <div className="w-72 h-72">
-              <QrReader
-                constraints={{ facingMode: "environment" }}
-                onResult={(result: any, error: any) => {
-                  if (!!result) handleScan(result.getText());
-                }}
-                containerStyle={{ width: "100%", height: "100%" }}
-              />
             </div>
             <Button className="mt-4" variant="outline" onClick={() => setShowScanner(false)}>Cancelar</Button>
           </div>

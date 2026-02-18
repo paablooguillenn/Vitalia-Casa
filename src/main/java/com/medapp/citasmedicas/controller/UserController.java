@@ -1,4 +1,5 @@
 
+
 package com.medapp.citasmedicas.controller;
 
 import com.medapp.citasmedicas.model.User;
@@ -14,6 +15,15 @@ import java.util.List;
 @RequestMapping("/api/users")
 @CrossOrigin(origins = "*")
 public class UserController {
+    // DTO para actualización de usuario (acepta role como String)
+    public static class UserUpdateDTO {
+        public String nombre;
+        public String email;
+        public String telefono;
+        public String role;
+    }
+    @Autowired
+    private com.medapp.citasmedicas.service.AuditLogService auditLogService;
     // DTO para exponer usuarios con rol en inglés/minúsculas
     public static class UserDTO {
         private Long id;
@@ -145,7 +155,7 @@ public class UserController {
     private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     @PostMapping
-    public ResponseEntity<User> createUser(@RequestBody User user) {
+    public ResponseEntity<User> createUser(@RequestBody User user, Authentication authentication) {
         // Codifica la contraseña si viene en texto plano
         if (user.getPasswordHash() != null && !user.getPasswordHash().startsWith("$2a$")) {
             user.setPasswordHash(passwordEncoder.encode(user.getPasswordHash()));
@@ -155,6 +165,9 @@ public class UserController {
             user.setRole(User.Role.PACIENTE);
         }
         User savedUser = userRepo.save(user);
+        // Log de creación de usuario
+        String actor = authentication != null ? authentication.getName() : "anonymous";
+        auditLogService.log(actor, "CREATE_USER", "Creó usuario: " + savedUser.getEmail());
         return ResponseEntity.ok(savedUser);
     }
 
@@ -184,26 +197,68 @@ public class UserController {
      * Permite actualizar el perfil de un usuario solo si es el propio usuario autenticado o un admin.
      */
     @PutMapping("/{id}")
-    public ResponseEntity<UserDTO> updateUser(@PathVariable Long id, @RequestBody User userUpdate, Authentication authentication) {
+    public ResponseEntity<UserDTO> updateUser(@PathVariable Long id, @RequestBody UserUpdateDTO userUpdate, Authentication authentication) {
         User user = userRepo.findById(id).orElse(null);
         if (user == null) return ResponseEntity.notFound().build();
 
-        // Si es admin, puede actualizar cualquier perfil
-        if (authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
-            user.setNombre(userUpdate.getNombre());
-            user.setTelefono(userUpdate.getTelefono());
-            userRepo.save(user);
-            return ResponseEntity.ok(new UserDTO(user));
+        boolean isAdmin = authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        String authEmail = authentication.getName();
+
+        // Solo admin o el propio usuario pueden editar
+        if (!isAdmin && !user.getEmail().equals(authEmail)) {
+            return ResponseEntity.status(403).build();
         }
-        // Si el usuario autenticado es el mismo que el solicitado
-        String email = authentication.getName();
-        if (user.getEmail().equals(email)) {
-            user.setNombre(userUpdate.getNombre());
-            user.setTelefono(userUpdate.getTelefono());
-            userRepo.save(user);
-            return ResponseEntity.ok(new UserDTO(user));
+
+        // Si se cambia el email, validar que no exista otro usuario con ese email
+        if (userUpdate.email != null && !userUpdate.email.equals(user.getEmail())) {
+            if (userRepo.findByEmail(userUpdate.email).isPresent()) {
+                return ResponseEntity.status(409).body(null); // Email ya en uso
+            }
+            user.setEmail(userUpdate.email);
         }
-        // Si no, denegar acceso
-        return ResponseEntity.status(403).build();
+
+        if (userUpdate.nombre != null) {
+            user.setNombre(userUpdate.nombre);
+        }
+        if (userUpdate.telefono != null) {
+            user.setTelefono(userUpdate.telefono);
+        }
+        // Solo admin puede cambiar el rol
+        if (isAdmin && userUpdate.role != null) {
+            String roleStr = userUpdate.role.trim().toUpperCase();
+            if (roleStr.equals("PATIENT")) roleStr = "PACIENTE";
+            if (roleStr.equals("ADMIN")) roleStr = "ADMIN";
+            if (roleStr.equals("DOCTOR")) roleStr = "DOCTOR";
+            if (roleStr.equals("PACIENTE")) roleStr = "PACIENTE";
+            try {
+                user.setRole(User.Role.valueOf(roleStr));
+            } catch (Exception ignored) {}
+        }
+        userRepo.save(user);
+        return ResponseEntity.ok(new UserDTO(user));
+    }
+
+    /**
+     * Elimina un usuario por id. Solo admin puede eliminar.
+     */
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> deleteUser(@PathVariable Long id, Authentication authentication) {
+        User user = userRepo.findById(id).orElse(null);
+        if (user == null) return ResponseEntity.notFound().build();
+
+        // Eliminar citas asociadas
+        appointmentRepo.findByDoctor_Id(id).forEach(apt -> appointmentRepo.delete(apt));
+        appointmentRepo.findByPatient_Id(id).forEach(apt -> appointmentRepo.delete(apt));
+
+        // Eliminar doctor asociado si existe
+        com.medapp.citasmedicas.model.Doctor doctor = doctorRepo.findByUser_Id(id);
+        if (doctor != null) doctorRepo.delete(doctor);
+
+        userRepo.delete(user);
+        // Log de eliminación
+        String actor = authentication != null ? authentication.getName() : "anonymous";
+        auditLogService.log(actor, "DELETE_USER", "Eliminó usuario: " + user.getEmail());
+        return ResponseEntity.ok().build();
     }
 }

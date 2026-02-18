@@ -26,22 +26,26 @@ export default function PatientAppointmentsPage() {
   useEffect(() => {
     if (!user?.id) return;
     setLoading(true);
-    fetch(`http://192.168.68.58:8080/api/users/${user.id}/appointments`, {
+    fetch(`/api/users/${user.id}/appointments`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
     })
       .then(res => res.json())
       .then(data => {
-        const statusMap = {
-          'CONFIRMED': 'CONFIRMADA',
-          'PENDING': 'PENDIENTE',
-          'COMPLETED': 'COMPLETADA',
-          'CANCELLED': 'CANCELADA',
-          'CHECKED_IN': 'EN CONSULTA',
-        };
+        // Función robusta para mapear cualquier variante de estado
+        function normalizeStatus(status: string): string {
+          if (!status) return 'DESCONOCIDO';
+          const s = status.toUpperCase().replace(/\s|-/g, '_');
+          if (["CONFIRMADA", "CONFIRMADO", "CONFIRMED"].includes(s)) return "CONFIRMADA";
+          if (["PENDIENTE", "PENDING"].includes(s)) return "PENDIENTE";
+          if (["COMPLETADA", "COMPLETADO", "COMPLETED"].includes(s)) return "COMPLETADA";
+          if (["CANCELADA", "CANCELADO", "CANCELLED"].includes(s)) return "CANCELADA";
+          if (["EN_CONSULTA", "ENCONSULTA", "CHECKED_IN", "CHECKEDIN"].includes(s)) return "EN CONSULTA";
+          return "DESCONOCIDO";
+        }
         const mapped = data.map((apt: any) => {
-          const mappedStatus = statusMap[apt.status] || 'DESCONOCIDO';
+          const mappedStatus = normalizeStatus(apt.status);
           if (mappedStatus === 'DESCONOCIDO') {
             // eslint-disable-next-line no-console
             console.warn('Estado desconocido recibido:', apt.status, apt);
@@ -169,7 +173,7 @@ export default function PatientAppointmentsPage() {
                   setCancelLoading(true);
                   setCancelError(null);
                   try {
-                    const res = await fetch(`http://192.168.68.58:8080/api/appointments/${cancelDialog.aptId}/cancel`, {
+                    const res = await fetch(`https://192.168.0.164:8443/api/appointments/${cancelDialog.aptId}/cancel`, {
                       method: "PATCH",
                       headers: {
                         "Authorization": `Bearer ${localStorage.getItem('token')}`,

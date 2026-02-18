@@ -1,17 +1,23 @@
 "use client"
 
+
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import type { UserRole } from "@/lib/types"
 import { navByRole } from "./sidebar-nav"
+import { useRef } from "react"
+import { useHideOnScroll } from "@/hooks/use-hide-on-scroll"
+
 
 export function BottomNav({ role }: { role: UserRole }) {
   const pathname = usePathname()
-  const items = navByRole[role].slice(0, 5)
+  const items = navByRole[role].slice(0, 6)
+  const navRef = useRef<HTMLElement>(null) as React.RefObject<HTMLElement>
+  useHideOnScroll(navRef)
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-card md:hidden">
+    <nav ref={navRef} className="fixed bottom-0 left-0 right-0 z-50 border-t bg-card md:hidden transition-transform duration-300 will-change-transform">
       <div className="flex items-center justify-around py-1">
         {items.map((item) => {
           const isActive = pathname === item.href || (item.href !== `/${role}` && pathname.startsWith(item.href))

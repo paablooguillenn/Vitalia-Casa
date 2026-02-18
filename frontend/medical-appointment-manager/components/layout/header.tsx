@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Moon, Sun, LogOut, User } from "lucide-react"
+import { Moon, Sun, LogOut, User, Bell } from "lucide-react"
 
 export function Header() {
   const { user, logout } = useAuth()
@@ -87,6 +87,13 @@ export function Header() {
 
       {/* Controles */}
       <div className="flex items-center gap-1">
+        {/* Notificaciones */}
+        <a href={user?.role === "doctor" ? "/doctor/notifications" : "/patient/notifications"} className="relative">
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Bell className="h-5 w-5" />
+            <span className="sr-only">Notificaciones</span>
+          </Button>
+        </a>
         {/* Theme Toggle */}
         <Button
           variant="ghost"
@@ -98,7 +105,6 @@ export function Header() {
           <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
           <span className="sr-only">Cambiar tema</span>
         </Button>
-
         {/* User Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -106,7 +112,7 @@ export function Header() {
               <Avatar className="h-7 w-7">
                 {user?.profilePictureUrl ? (
                   <AvatarImage
-                    src={`http://192.168.68.58:8080/${user.profilePictureUrl.replace(/\\/g, "/")}?t=${Date.now()}`}
+                    src={`/api/${user.profilePictureUrl.replace(/\\/g, "/")}?t=${Date.now()}`}
                     alt="Foto de perfil"
                   />
                 ) : null}
@@ -120,7 +126,6 @@ export function Header() {
               <span className="sr-only">Abrir menú usuario</span>
             </Button>
           </DropdownMenuTrigger>
-          
           <DropdownMenuContent align="end" className="w-56">
             <div className="px-2 py-1.5 text-xs text-muted-foreground">
               <span>{displayData.email}</span>

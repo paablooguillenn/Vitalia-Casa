@@ -8,7 +8,7 @@ spring:
     url: jdbc:h2:mem:testdb  # En desarrollo local
     driver-class-name: org.h2.Driver
     username: sa
-    # En producción (Docker), estas se sobrescriben con env vars
+    # En Docker, estas se sobrescriben con env vars. Solo HTTP, sin SSL/HTTPS.
   jpa:
     hibernate:
       ddl-auto: update
