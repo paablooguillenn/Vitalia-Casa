@@ -173,7 +173,7 @@ export default function PatientAppointmentsPage() {
                   setCancelLoading(true);
                   setCancelError(null);
                   try {
-                    const res = await fetch(`https://192.168.0.164:8443/api/appointments/${cancelDialog.aptId}/cancel`, {
+                    const res = await fetch(`/api/appointments/${cancelDialog.aptId}/cancel`, {
                       method: "PATCH",
                       headers: {
                         "Authorization": `Bearer ${localStorage.getItem('token')}`,

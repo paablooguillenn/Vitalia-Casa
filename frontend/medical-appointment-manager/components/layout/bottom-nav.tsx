@@ -12,10 +12,14 @@ import { useHideOnScroll } from "@/hooks/use-hide-on-scroll"
 
 export function BottomNav({ role }: { role: UserRole }) {
   const pathname = usePathname()
-  const items = navByRole[role].slice(0, 6)
+  const items = navByRole[role]
   const navRef = useRef<HTMLElement>(null) as React.RefObject<HTMLElement>
-  useHideOnScroll(navRef)
+  // Solo ocultar al hacer scroll si NO es admin
+  if (role !== "admin") {
+    useHideOnScroll(navRef)
+  }
 
+  // Mostrar el BottomNav para todos los roles, aunque admin tenga menos items
   return (
     <nav ref={navRef} className="fixed bottom-0 left-0 right-0 z-50 border-t bg-card md:hidden transition-transform duration-300 will-change-transform">
       <div className="flex items-center justify-around py-1">

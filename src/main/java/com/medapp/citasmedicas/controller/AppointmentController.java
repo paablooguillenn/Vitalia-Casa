@@ -30,12 +30,17 @@ public class AppointmentController {
             }
             String userEmail = authentication.getName();
             boolean changed = false;
+            boolean dateTimeChanged = false;
+            java.time.LocalDateTime oldDateTime = apt.getDateTime();
             if (updates.containsKey("date") && updates.containsKey("time")) {
                 String date = updates.get("date").toString();
                 String time = updates.get("time").toString();
                 java.time.LocalDateTime dateTime = java.time.LocalDateTime.parse(date + "T" + time);
-                apt.setDateTime(dateTime);
-                changed = true;
+                if (oldDateTime == null || !oldDateTime.equals(dateTime)) {
+                    apt.setDateTime(dateTime);
+                    changed = true;
+                    dateTimeChanged = true;
+                }
             }
             if (updates.containsKey("status")) {
                 String oldStatus = apt.getStatus();
@@ -50,6 +55,32 @@ public class AppointmentController {
                 auditLogService.log(userEmail, "UPDATE_APPOINTMENT", "Modificó cita " + id);
                 // Log de edición de cita
                 auditLogService.log(userEmail, "UPDATE_APPOINTMENT_DETAIL", "Editó detalles de la cita " + id);
+                if (dateTimeChanged) {
+                    // Notificar a paciente y doctor
+                    String notes = apt.getNotes() != null ? apt.getNotes() : "Sin notas";
+                    String msgPaciente = String.format("La fecha/hora de tu cita con el Dr. %s ha sido modificada a %s.\nNotas: %s", apt.getDoctor().getNombre(), apt.getDateTime(), notes);
+                    String msgDoctor = String.format("La fecha/hora de la cita con %s ha sido modificada a %s.\nNotas: %s", apt.getPatient().getNombre(), apt.getDateTime(), notes);
+                    // Notificación y correo a paciente
+                    if (apt.getPatient() != null) {
+                        appointmentService.getNotificationService().createNotification(
+                            "Cita modificada",
+                            msgPaciente,
+                            "APPOINTMENT_MODIFIED",
+                            apt.getPatient()
+                        );
+                    }
+                    // Notificación y correo a doctor
+                    if (apt.getDoctor() != null && apt.getDoctor().getUser() != null) {
+                        appointmentService.getNotificationService().createNotification(
+                            "Cita modificada",
+                            msgDoctor,
+                            "APPOINTMENT_MODIFIED",
+                            apt.getDoctor().getUser()
+                        );
+                    }
+                    // Log específico de modificación de fecha/hora
+                    auditLogService.log(userEmail, "UPDATE_APPOINTMENT_DATETIME", "Modificó fecha/hora de la cita " + id + ": " + (oldDateTime != null ? oldDateTime.toString() : "-") + " → " + apt.getDateTime());
+                }
             }
             return ResponseEntity.ok("Cita actualizada correctamente");
         } catch (Exception e) {

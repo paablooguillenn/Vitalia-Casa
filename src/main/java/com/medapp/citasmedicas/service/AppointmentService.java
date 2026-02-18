@@ -19,6 +19,9 @@ import java.util.List;
 
 @Service
 public class AppointmentService {
+        public NotificationService getNotificationService() {
+            return notificationService;
+        }
     // Recordatorio automático 24h antes de la cita
     @org.springframework.scheduling.annotation.Scheduled(cron = "0 0 * * * *") // Cada hora
     public void sendAppointmentReminders() {
@@ -208,7 +211,8 @@ public class AppointmentService {
 
             // Generar UUID para QR único
             String qrToken = java.util.UUID.randomUUID().toString();
-            String qrUrl = String.format("http://192.168.56.1:3000/checkin?token=%s", qrToken);
+            // Cambia aquí la IP por la actual de tu frontend
+            String qrUrl = String.format("http://10.48.222.3:3000/checkin?token=%s", qrToken);
             appointment.setQrCodeUrl(qrUrl);
 
             Appointment saved = appointmentRepo.save(appointment);
