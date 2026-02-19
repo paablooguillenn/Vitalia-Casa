@@ -44,7 +44,10 @@ public class FileAttachmentController {
             auditLogService.log(userEmail, "UPLOAD_FILE", "Subió archivo a cita " + appointmentId + ": " + file.getOriginalFilename());
             return ResponseEntity.ok(saved);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
+            e.printStackTrace(); // Log the error in server logs
+            return ResponseEntity.badRequest()
+                .header("Content-Type", "application/json")
+                .body(null);
         }
     }
 }

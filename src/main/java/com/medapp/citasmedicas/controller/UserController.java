@@ -75,11 +75,15 @@ public class UserController {
             String filename = System.currentTimeMillis() + "_" + file.getOriginalFilename();
             java.nio.file.Path filePath = java.nio.file.Paths.get(uploadDir, filename);
             java.nio.file.Files.write(filePath, file.getBytes());
-            // Actualizar URL en usuario
-            user.setProfilePictureUrl(filePath.toString());
+            // Log ruta y nombre
+            System.out.println("[UserController] Foto subida: " + filePath.toString());
+            // Guardar solo la ruta relativa pública
+            user.setProfilePictureUrl(uploadDir + filename);
+            System.out.println("[UserController] Ruta guardada en profilePictureUrl: " + uploadDir + filename);
             userRepo.save(user);
-            return ResponseEntity.ok("Foto de perfil actualizada");
+            return ResponseEntity.ok("Foto de perfil actualizada: " + uploadDir + filename);
         } catch (Exception e) {
+            System.err.println("[UserController] Error al subir la foto: " + e.getMessage());
             return ResponseEntity.status(500).body("Error al subir la foto");
         }
     }

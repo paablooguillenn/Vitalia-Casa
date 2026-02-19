@@ -51,24 +51,23 @@ public class DoctorController {
 
     @GetMapping
     public ResponseEntity<List<Doctor>> getAllDoctors(@RequestParam(required = false) Long userId, @RequestParam(required = false, name = "user_id") Long user_id) {
-        try {
-            getCurrentUser(); // ✅ VALIDACIÓN
-            // Si se solicita por userId o user_id, devolver solo el doctor correspondiente
-            Long resolvedUserId = userId != null ? userId : user_id;
-            if (resolvedUserId != null) {
-                Doctor doctor = doctorService.getDoctorByUserId(resolvedUserId);
-                if (doctor != null) {
-                    return ResponseEntity.ok(List.of(doctor));
-                } else {
-                    return ResponseEntity.ok(List.of());
-                }
-            }
-            List<Doctor> doctors = doctorService.getAllDoctors();
-            return ResponseEntity.ok(doctors);
-        } catch (RuntimeException e) {
-            log.error("Error getAllDoctors: {}", e.getMessage());
+        // Permitir acceso a cualquier usuario autenticado (no requiere rol específico)
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || auth.getPrincipal().equals("anonymousUser")) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+        // Si se solicita por userId o user_id, devolver solo el doctor correspondiente
+        Long resolvedUserId = userId != null ? userId : user_id;
+        if (resolvedUserId != null) {
+            Doctor doctor = doctorService.getDoctorByUserId(resolvedUserId);
+            if (doctor != null) {
+                return ResponseEntity.ok(List.of(doctor));
+            } else {
+                return ResponseEntity.ok(List.of());
+            }
+        }
+        List<Doctor> doctors = doctorService.getAllDoctors();
+        return ResponseEntity.ok(doctors);
     }
 
     @PostMapping

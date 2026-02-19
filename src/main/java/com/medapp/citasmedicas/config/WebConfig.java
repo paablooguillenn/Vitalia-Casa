@@ -9,7 +9,8 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         // Expone la carpeta profile_pictures para acceso público
+        // Usar ruta relativa universal (funciona en local y Docker)
         registry.addResourceHandler("/profile_pictures/**")
-                .addResourceLocations("file:/app/profile_pictures/");
+            .addResourceLocations("file:profile_pictures/");
     }
 }

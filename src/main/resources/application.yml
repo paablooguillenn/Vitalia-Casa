@@ -22,7 +22,6 @@ spring:
       password: 123456  # Cambiado para coincidir con docker-compose
 
 server:
-  address: 10.48.222.3
   port: 8080
 
 jwt:

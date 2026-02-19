@@ -81,9 +81,9 @@ export default function PatientProfilePage() {
           <div className="flex items-center gap-4">
             <div className="relative">
               <Avatar className="h-16 w-16">
-                {profilePictureUrl ? (
-                      <AvatarImage src={`/api/${profilePictureUrl.replace(/\\/g, '/')}`} alt="Foto de perfil" />
-                ) : null}
+                    {profilePictureUrl ? (
+                      <AvatarImage src={`/${profilePictureUrl.replace(/\\/g, '/')}`} alt="Foto de perfil" />
+                    ) : null}
                 <AvatarFallback className="bg-primary/10 text-primary text-lg font-semibold">
                   {initials}
                 </AvatarFallback>
@@ -110,6 +110,8 @@ export default function PatientProfilePage() {
                           },
                           body: formData
                         });
+                        const resText = await res.text();
+                        console.log("[Perfil] Respuesta subida foto:", res.status, resText);
                         if (!res.ok) throw new Error("Error al subir la foto");
                         toast.success("Foto de perfil actualizada");
                         // Refrescar la foto
@@ -118,6 +120,7 @@ export default function PatientProfilePage() {
                         })
                           .then(res => res.json())
                           .then(data => {
+                            console.log("[Perfil] Datos usuario tras subir foto:", data);
                             setProfilePictureUrl(data.profilePictureUrl || null);
                             setImageTimestamp(Date.now());
                             // Actualizar el usuario global para que el header y otros componentes vean la nueva foto
@@ -125,9 +128,13 @@ export default function PatientProfilePage() {
                               ...user,
                               profilePictureUrl: data.profilePictureUrl || null
                             });
+                            if (data.profilePictureUrl) {
+                              console.log("[Perfil] URL final imagen:", `/${data.profilePictureUrl.replace(/\\/g, '/')}`);
+                            }
                           });
                       } catch (err) {
                         toast.error("No se pudo subir la foto");
+                        console.error("[Perfil] Error subida foto:", err);
                       } finally {
                         setUploading(false);
                       }
