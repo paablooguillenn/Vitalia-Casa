@@ -50,14 +50,15 @@ function LogsPage() {
   }, [])
 
   const filtered = useMemo(() => {
-    if (!query.trim()) return logs
-    const q = query.toLowerCase()
-    return logs.filter(
+    let sorted = [...logs].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    if (!query.trim()) return sorted;
+    const q = query.toLowerCase();
+    return sorted.filter(
       (l) =>
         (l.userName || "").toLowerCase().includes(q) ||
         (l.action || "").toLowerCase().includes(q) ||
         (l.details || "").toLowerCase().includes(q)
-    )
+    );
   }, [logs, query])
 
   return (

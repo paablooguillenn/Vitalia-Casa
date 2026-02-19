@@ -12,7 +12,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql  # ← PARA EJECUTAR init.sql
     healthcheck:  
-      test: ["CMD-SHELL", "pg_isready -U postgres -d citasmedicas -h 192.168.0.186"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d citasmedicas -h 10.48.222.3"]
       interval: 10s
       timeout: 5s
       retries: 30
@@ -38,6 +38,8 @@ services:
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 10
       SPRING_DATASOURCE_HIKARI_IDLE_TIMEOUT: 600000
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    volumes:
+      - ./profile_pictures:/app/profile_pictures
   frontend:
     build:
       context: ./frontend/medical-appointment-manager

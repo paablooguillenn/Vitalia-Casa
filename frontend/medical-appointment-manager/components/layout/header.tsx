@@ -112,7 +112,7 @@ export function Header() {
               <Avatar className="h-7 w-7">
                 {user?.profilePictureUrl ? (
                   <AvatarImage
-                    src={`/api/${user.profilePictureUrl.replace(/\\/g, "/")}?t=${Date.now()}`}
+                    src={user.profilePictureUrl + `?t=${Date.now()}`}
                     alt="Foto de perfil"
                   />
                 ) : null}

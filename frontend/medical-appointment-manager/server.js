@@ -8,8 +8,8 @@ const app = next({ dev });
 const handle = app.getRequestHandler();
 
 const httpsOptions = {
-  key: fs.readFileSync("./192.168.0.186-key.pem"),
-  cert: fs.readFileSync("./192.168.0.186.pem"),
+  key: fs.readFileSync("./10.48.222.3-key.pem"),
+  cert: fs.readFileSync("./10.48.222.3.pem"),
 };
 
 app.prepare().then(() => {
@@ -18,6 +18,6 @@ app.prepare().then(() => {
     handle(req, res, parsedUrl);
   }).listen(3000, (err) => {
     if (err) throw err;
-    console.log("> Server running at http://192.168.0.186:3000");
+    console.log("> Server running at http://10.48.222.3:3000");
   });
 });

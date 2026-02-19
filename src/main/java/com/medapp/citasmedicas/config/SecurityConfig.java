@@ -51,10 +51,18 @@ public class SecurityConfig {
                     "/v3/api-docs.yaml",
                     "/webjars/**",
                     "/api/auth/**",
-                    "/profile_pictures/**" // ← PERMITIR ACCESO PÚBLICO A LAS FOTOS
+                    "/profile_pictures/**", // por si acaso
+                    "/api/profile-pictures/**" // ← PERMITIR ACCESO PÚBLICO AL ENDPOINT CORRECTO
                 ).permitAll()
                 // ✅ APIS DE TU APP - PERMITIDO TODO
                 .requestMatchers("/api/doctors/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/doctor-availability/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/doctor-availability/**").permitAll()
+                .requestMatchers(HttpMethod.PUT, "/api/doctor-availability/**").permitAll()
+                .requestMatchers(HttpMethod.DELETE, "/api/doctor-availability/**").permitAll()
+                .requestMatchers(HttpMethod.OPTIONS, "/api/doctor-availability/**").permitAll()
+                // ✅ SUBIDA DE ARCHIVOS SIN AUTENTICACIÓN
+                .requestMatchers(HttpMethod.POST, "/api/files/upload").permitAll()
                 .requestMatchers(HttpMethod.PATCH, "/api/appointments/**").authenticated()
                 .requestMatchers("/api/appointments/**").permitAll()  // ← GET, POST, etc. públicos, pero PATCH requiere autenticación
                 // ✅ ENDPOINTS DE ADMIN: SOLO AUTENTICADO

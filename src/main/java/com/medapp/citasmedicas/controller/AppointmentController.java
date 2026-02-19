@@ -31,7 +31,9 @@ public class AppointmentController {
             String userEmail = authentication.getName();
             boolean changed = false;
             boolean dateTimeChanged = false;
+            boolean statusChanged = false;
             java.time.LocalDateTime oldDateTime = apt.getDateTime();
+            String oldStatus = apt.getStatus();
             if (updates.containsKey("date") && updates.containsKey("time")) {
                 String date = updates.get("date").toString();
                 String time = updates.get("time").toString();
@@ -43,41 +45,63 @@ public class AppointmentController {
                 }
             }
             if (updates.containsKey("status")) {
-                String oldStatus = apt.getStatus();
                 String newStatus = updates.get("status").toString();
-                apt.setStatus(newStatus);
-                changed = true;
-                // Log cambio de estado
-                auditLogService.log(userEmail, "UPDATE_APPOINTMENT_STATUS", "Cambio de estado de cita " + id + ": " + oldStatus + " → " + newStatus);
+                if (!oldStatus.equals(newStatus)) {
+                    apt.setStatus(newStatus);
+                    changed = true;
+                    statusChanged = true;
+                    // Log cambio de estado
+                    auditLogService.log(userEmail, "UPDATE_APPOINTMENT_STATUS", "Cambio de estado de cita " + id + ": " + oldStatus + " → " + newStatus);
+                }
             }
             if (changed) {
                 appointmentService.saveAppointment(apt);
                 auditLogService.log(userEmail, "UPDATE_APPOINTMENT", "Modificó cita " + id);
                 // Log de edición de cita
                 auditLogService.log(userEmail, "UPDATE_APPOINTMENT_DETAIL", "Editó detalles de la cita " + id);
-                if (dateTimeChanged) {
-                    // Notificar a paciente y doctor
-                    String notes = apt.getNotes() != null ? apt.getNotes() : "Sin notas";
-                    String msgPaciente = String.format("La fecha/hora de tu cita con el Dr. %s ha sido modificada a %s.\nNotas: %s", apt.getDoctor().getNombre(), apt.getDateTime(), notes);
-                    String msgDoctor = String.format("La fecha/hora de la cita con %s ha sido modificada a %s.\nNotas: %s", apt.getPatient().getNombre(), apt.getDateTime(), notes);
+                String notes = apt.getNotes() != null ? apt.getNotes() : "Sin notas";
+                // Notificar a paciente y doctor si hubo cambio relevante
+                if (dateTimeChanged || statusChanged) {
+                    String msgPaciente = String.format(
+                        dateTimeChanged && statusChanged ?
+                            "La fecha/hora y el estado de tu cita con el Dr. %s han sido modificados a %s (%s).\nNotas: %s" :
+                        dateTimeChanged ?
+                            "La fecha/hora de tu cita con el Dr. %s ha sido modificada a %s.\nNotas: %s" :
+                        statusChanged ?
+                            "El estado de tu cita con el Dr. %s ha cambiado a %s.\nNotas: %s" :
+                            "",
+                        apt.getDoctor().getNombre(), apt.getDateTime(), apt.getStatus(), notes
+                    );
+                    String msgDoctor = String.format(
+                        dateTimeChanged && statusChanged ?
+                            "La fecha/hora y el estado de la cita con %s han sido modificados a %s (%s).\nNotas: %s" :
+                        dateTimeChanged ?
+                            "La fecha/hora de la cita con %s ha sido modificada a %s.\nNotas: %s" :
+                        statusChanged ?
+                            "El estado de la cita con %s ha cambiado a %s.\nNotas: %s" :
+                            "",
+                        apt.getPatient().getNombre(), apt.getDateTime(), apt.getStatus(), notes
+                    );
                     // Notificación y correo a paciente
-                    if (apt.getPatient() != null) {
+                    if (apt.getPatient() != null && !msgPaciente.isEmpty()) {
                         appointmentService.getNotificationService().createNotification(
-                            "Cita modificada",
+                            "Cita actualizada",
                             msgPaciente,
-                            "APPOINTMENT_MODIFIED",
+                            "APPOINTMENT_UPDATED",
                             apt.getPatient()
                         );
                     }
                     // Notificación y correo a doctor
-                    if (apt.getDoctor() != null && apt.getDoctor().getUser() != null) {
+                    if (apt.getDoctor() != null && apt.getDoctor().getUser() != null && !msgDoctor.isEmpty()) {
                         appointmentService.getNotificationService().createNotification(
-                            "Cita modificada",
+                            "Cita actualizada",
                             msgDoctor,
-                            "APPOINTMENT_MODIFIED",
+                            "APPOINTMENT_UPDATED",
                             apt.getDoctor().getUser()
                         );
                     }
+                }
+                if (dateTimeChanged) {
                     // Log específico de modificación de fecha/hora
                     auditLogService.log(userEmail, "UPDATE_APPOINTMENT_DATETIME", "Modificó fecha/hora de la cita " + id + ": " + (oldDateTime != null ? oldDateTime.toString() : "-") + " → " + apt.getDateTime());
                 }
@@ -201,10 +225,11 @@ public class AppointmentController {
 
             Long doctorId = Long.valueOf(request.get("doctorId").toString());
             Long patientId = Long.valueOf(request.get("patientId").toString());
+
             String dateTimeStr = request.get("dateTime").toString();
             String especialidad = request.getOrDefault("especialidad", "").toString();
 
-            // Soporta fechas con 'Z' (UTC) usando OffsetDateTime
+            // Parsear como OffsetDateTime (con zona horaria, formato ISO)
             java.time.LocalDateTime dateTime = java.time.OffsetDateTime.parse(dateTimeStr).toLocalDateTime();
 
             // ✅ LLAMAR SERVICE CON TRY/CATCH

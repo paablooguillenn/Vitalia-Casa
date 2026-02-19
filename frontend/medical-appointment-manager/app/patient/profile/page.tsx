@@ -82,7 +82,7 @@ export default function PatientProfilePage() {
             <div className="relative">
               <Avatar className="h-16 w-16">
                     {profilePictureUrl ? (
-                      <AvatarImage src={`/${profilePictureUrl.replace(/\\/g, '/')}`} alt="Foto de perfil" />
+                      <AvatarImage src={profilePictureUrl} alt="Foto de perfil" />
                     ) : null}
                 <AvatarFallback className="bg-primary/10 text-primary text-lg font-semibold">
                   {initials}

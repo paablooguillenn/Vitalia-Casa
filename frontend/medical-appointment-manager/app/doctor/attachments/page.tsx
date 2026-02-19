@@ -18,7 +18,7 @@ export default function DoctorAttachmentsPage() {
   const [files, setFiles] = useState<FileAttachment[]>(fileAttachments)
   const [dragOver, setDragOver] = useState(false)
 
-  const appointmentId = "1"; // TODO: obtener dinámicamente
+  // Subida de archivos sin appointmentId
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault()
     setDragOver(false)
@@ -28,13 +28,21 @@ export default function DoctorAttachmentsPage() {
       formData.append("file", dropped[0])
       formData.append("type", dropped[0].type || "document")
       try {
-        const res = await fetch(`/api/appointments/${appointmentId}/files`, {
+        const res = await fetch(`/api/files/upload`, {
           method: "POST",
           body: formData
         })
         if (!res.ok) throw new Error("Error al subir archivo")
-        const saved: FileAttachment = await res.json()
-        setFiles((prev) => [saved, ...prev])
+        const saved = await res.json()
+        setFiles((prev) => [
+          {
+            ...saved,
+            size: dropped[0].size || 0,
+            appointmentId: "",
+            uploadedAt: saved.uploadedAt || new Date().toISOString()
+          },
+          ...prev
+        ])
         toast.success(`Archivo "${dropped[0].name}" subido correctamente`)
       } catch (err) {
         toast.error("Error al subir archivo")
@@ -48,14 +56,22 @@ export default function DoctorAttachmentsPage() {
       const formData = new FormData()
       formData.append("file", selected[0])
       formData.append("type", selected[0].type || "document")
-      fetch(`/api/appointments/${appointmentId}/files`, {
+      fetch(`/api/files/upload`, {
         method: "POST",
         body: formData
       })
         .then(async (res) => {
           if (!res.ok) throw new Error("Error al subir archivo")
-          const saved: FileAttachment = await res.json()
-          setFiles((prev) => [saved, ...prev])
+          const saved = await res.json()
+          setFiles((prev) => [
+            {
+              ...saved,
+              size: selected[0].size || 0,
+              appointmentId: "",
+              uploadedAt: saved.uploadedAt || new Date().toISOString()
+            },
+            ...prev
+          ])
           toast.success(`Archivo "${selected[0].name}" subido correctamente`)
         })
         .catch(() => {

@@ -16,6 +16,14 @@ public class AdminLogController {
     @GetMapping
     public ResponseEntity<List<Map<String, Object>>> getLogs() {
         List<AuditLog> logList = auditLogRepository.findAll();
+        // Ordenar por timestamp descendente (más reciente primero) y luego invertir por si acaso
+        logList.sort((a, b) -> {
+            if (a.getTimestamp() == null && b.getTimestamp() == null) return 0;
+            if (a.getTimestamp() == null) return 1;
+            if (b.getTimestamp() == null) return -1;
+            return b.getTimestamp().compareTo(a.getTimestamp());
+        });
+        Collections.reverse(logList);
         List<Map<String, Object>> logs = new ArrayList<>();
         for (AuditLog log : logList) {
             Map<String, Object> l = new HashMap<>();

@@ -19,6 +19,15 @@ CREATE TABLE public.appointments (
 	CONSTRAINT appointments_patient_id_fkey FOREIGN KEY (patient_id) REFERENCES public.users(id) ON DELETE CASCADE
 );
 
+-- Tabla de logs de auditoría
+CREATE TABLE IF NOT EXISTS public.audit_logs (
+	id bigserial PRIMARY KEY,
+	user_name varchar(255) NOT NULL,
+	action varchar(255) NOT NULL,
+	details text,
+	timestamp timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Drop table
 
 -- DROP TABLE public.doctor;

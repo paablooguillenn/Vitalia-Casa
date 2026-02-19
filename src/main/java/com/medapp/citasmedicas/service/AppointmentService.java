@@ -212,7 +212,7 @@ public class AppointmentService {
             // Generar UUID para QR único
             String qrToken = java.util.UUID.randomUUID().toString();
             // Cambia aquí la IP por la actual de tu frontend
-            String qrUrl = String.format("http://192.168.0.186:3000/checkin?token=%s", qrToken);
+            String qrUrl = String.format("http://10.48.222.3:3000/checkin?token=%s", qrToken);
             appointment.setQrCodeUrl(qrUrl);
 
             Appointment saved = appointmentRepo.save(appointment);

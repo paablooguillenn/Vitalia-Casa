@@ -67,24 +67,31 @@ public class UserController {
     @PostMapping(value = "/{id}/profile-picture", consumes = "multipart/form-data")
     public ResponseEntity<?> uploadProfilePicture(@PathVariable Long id, @RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
         User user = userRepo.findById(id).orElse(null);
-        if (user == null) return ResponseEntity.notFound().build();
+        System.out.println("[UserController] Intentando subir foto para userId=" + id);
+        if (user == null) {
+            System.err.println("[UserController] Usuario no encontrado para id=" + id);
+            return ResponseEntity.notFound().build();
+        }
         try {
-            // Guardar archivo en disco
-            String uploadDir = "profile_pictures/";
-            java.nio.file.Files.createDirectories(java.nio.file.Paths.get(uploadDir));
+            // Guardar archivo en la carpeta del backend
+            String backendDir = System.getProperty("user.dir") + "/profile_pictures/";
+            System.out.println("[UserController] Ruta destino de la foto (backend): " + backendDir);
+            java.nio.file.Files.createDirectories(java.nio.file.Paths.get(backendDir));
             String filename = System.currentTimeMillis() + "_" + file.getOriginalFilename();
-            java.nio.file.Path filePath = java.nio.file.Paths.get(uploadDir, filename);
+            java.nio.file.Path filePath = java.nio.file.Paths.get(backendDir, filename);
+            System.out.println("[UserController] Path final del archivo: " + filePath.toString());
             java.nio.file.Files.write(filePath, file.getBytes());
-            // Log ruta y nombre
             System.out.println("[UserController] Foto subida: " + filePath.toString());
-            // Guardar solo la ruta relativa pública
-            user.setProfilePictureUrl(uploadDir + filename);
-            System.out.println("[UserController] Ruta guardada en profilePictureUrl: " + uploadDir + filename);
+            // Guardar la ruta relativa para el endpoint de imágenes
+            String publicUrl = "/api/profile-pictures/" + filename;
+            user.setProfilePictureUrl(publicUrl);
+            System.out.println("[UserController] Ruta guardada en profilePictureUrl: " + publicUrl);
             userRepo.save(user);
-            return ResponseEntity.ok("Foto de perfil actualizada: " + uploadDir + filename);
+            return ResponseEntity.ok("Foto de perfil actualizada: " + publicUrl);
         } catch (Exception e) {
             System.err.println("[UserController] Error al subir la foto: " + e.getMessage());
-            return ResponseEntity.status(500).body("Error al subir la foto");
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("Error al subir la foto: " + e.getMessage());
         }
     }
 

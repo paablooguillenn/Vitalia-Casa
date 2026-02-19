@@ -1,6 +1,6 @@
-"use client"
 
-import { useState, useEffect } from "react"
+"use client"
+import { Suspense, useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 
@@ -45,7 +45,7 @@ interface TimeSlot {
   available: boolean
 }
 
-export default function NewAppointmentPage() {
+function NewAppointmentContent() {
   const searchParams = useSearchParams()
   const { user } = useAuth()
 
@@ -58,6 +58,9 @@ export default function NewAppointmentPage() {
   const [notes, setNotes] = useState("")
 
   const [doctors, setDoctors] = useState<Doctor[]>([])
+  useEffect(() => {
+    console.log("[LOG] Estado de doctors:", doctors)
+  }, [doctors])
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([])
 
   const [loadingDoctors, setLoadingDoctors] = useState(false)
@@ -75,23 +78,19 @@ export default function NewAppointmentPage() {
     const fetchDoctors = async () => {
       try {
         setLoadingDoctors(true)
-        console.log("[Nueva Cita] Solicitando médicos...")
         const res = await fetch("/api/doctors", {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         })
 
-        console.log("[Nueva Cita] Respuesta status:", res.status)
         if (!res.ok) throw new Error()
 
         const data = await res.json()
-        console.log("[Nueva Cita] Médicos recibidos:", data)
         setDoctors(data)
-      } catch (e) {
+      } catch {
         setDoctorError("Error al cargar médicos")
         toast.error("Error al cargar médicos")
-        console.error("[Nueva Cita] Error al cargar médicos:", e)
       } finally {
         setLoadingDoctors(false)
       }
@@ -161,13 +160,11 @@ export default function NewAppointmentPage() {
           }
         })
 
-        const busyTimes = appointments.map((apt: any) =>
-          new Date(apt.dateTime).toLocaleTimeString("es-ES", {
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: false,
-          })
-        )
+        // Restaurar comparación robusta: comparar horas locales exactas (HH:mm)
+        const busyTimes = appointments.map((apt: any) => {
+          const d = new Date(apt.dateTime)
+          return d.getHours().toString().padStart(2, "0") + ":" + d.getMinutes().toString().padStart(2, "0")
+        })
 
         setTimeSlots(
           slots.map((slot) => ({
@@ -197,6 +194,8 @@ export default function NewAppointmentPage() {
     const [hour, minute] = selectedTime.split(":")
     const dateTime = new Date(selectedDate)
     dateTime.setHours(Number(hour), Number(minute), 0, 0)
+    // Enviar en formato ISO con zona horaria (UTC)
+    const isoDateTime = dateTime.toISOString()
 
     try {
       const res = await fetch("/api/appointments", {
@@ -208,7 +207,7 @@ export default function NewAppointmentPage() {
         body: JSON.stringify({
           doctorId: doctor.id,
           patientId: user.id,
-          dateTime: dateTime.toISOString(),
+          dateTime: isoDateTime, // Enviar en formato ISO con zona horaria
           especialidad: doctor.especialidad,
           notes,
         }),
@@ -292,19 +291,16 @@ export default function NewAppointmentPage() {
           </CardHeader>
 
           <CardContent className="flex flex-col gap-3">
-
+            {console.log("[LOG] Renderizando lista de médicos", doctors)}
             {loadingDoctors ? (
               <div>Cargando médicos...</div>
             ) : doctorError ? (
               <div className="text-red-500">
                 {doctorError}
               </div>
-            ) : doctors.length === 0 ? (
-              <div className="text-muted-foreground">
-                No hay médicos disponibles.
-              </div>
             ) : (
               doctors.map((doc) => (
+                console.log("[LOG] Renderizando médico:", doc),
                 <button
                   key={doc.id}
                   onClick={() =>
@@ -518,5 +514,13 @@ export default function NewAppointmentPage() {
         </Card>
       )}
     </div>
+  )
+}
+
+export default function NewAppointmentPage() {
+  return (
+    <Suspense fallback={<div>Cargando...</div>}>
+      <NewAppointmentContent />
+    </Suspense>
   )
 }

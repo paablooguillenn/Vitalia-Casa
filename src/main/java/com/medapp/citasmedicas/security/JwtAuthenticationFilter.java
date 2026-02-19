@@ -1,3 +1,4 @@
+
 package com.medapp.citasmedicas.security;
 
 import jakarta.servlet.FilterChain;
@@ -23,6 +24,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     public JwtAuthenticationFilter(JwtUtil jwtUtil, UserDetailsService userDetailsService) {
         this.jwtUtil = jwtUtil;
         this.userDetailsService = userDetailsService;
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        String path = request.getRequestURI();
+        // Ignorar rutas públicas
+        return path.startsWith("/api/profile-pictures/") ||
+               path.startsWith("/profile_pictures/") ||
+               path.startsWith("/api/auth/") ||
+               path.startsWith("/api/doctor-availability/") ||
+               path.startsWith("/swagger-ui") ||
+               path.startsWith("/v3/api-docs") ||
+               path.startsWith("/h2-console") ||
+               path.startsWith("/actuator");
     }
 
     @Override
